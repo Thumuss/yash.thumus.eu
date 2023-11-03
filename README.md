@@ -1,0 +1,1 @@
+euh `bun eval.ts`
