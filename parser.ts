@@ -144,12 +144,12 @@ class Parser {
     this.parsed = undefined;
   }
 
-  pass(): void {
+  next(): void {
     this.current++;
   }
 
   end(): boolean {
-    return this.tokens.length == this.current;
+    return this.findNext(TypeToken.Semicolon) == this.current || this.tokens.length == this.current;
   }
 
   currentToken(): Token {
@@ -160,7 +160,7 @@ class Parser {
     return this.tokens[this.current - nb];
   }
 
-  next(nb: number = 1): Token {
+  nextToken(nb: number = 1): Token {
     return this.tokens[this.current + nb];
   }
 
@@ -234,30 +234,30 @@ function baseObj(token: Token, p: Parser, priority: number = 1) {
   if (token.type === TypeToken.Argument) {
     const obj = new Command(token);
     p.add(obj);
-    p.pass();
+    p.next();
   } else {
     const obj = Obj.into(token);
     p.add(obj);
-    p.pass();
+    p.next();
   }
 }
 
 function baseOpeBinaire(token: Token, p: Parser) {
   const obj = Binaire.into(token);
   p.add(obj);
-  p.pass();
+  p.next();
 }
 
 function baseOpeUnaire(token: Token, p: Parser) {
   const obj = Unaire.into(token);
   p.add(obj);
-  p.pass();
+  p.next();
 }
 
 function minus(token: Token, p: Parser) {
   if (
     p.before()?.type != TypeToken.Number &&
-    p.next().type == TypeToken.Number
+    p.nextToken().type == TypeToken.Number
   ) {
     p.consume();
     (p.currentToken().value as number) *= -1;
@@ -279,7 +279,7 @@ function consumeParen(p: Parser) {
       p.consume();
     } else {
       token.plus += i * 100;
-      p.pass();
+      p.next();
     }
   }
   p.current = 0;
@@ -313,7 +313,7 @@ function parse(tokens: Token[]): Parser {
 }
 function test() {
   const lexe = lexer(
-    `echo a b "test a" 'aaaaa b b ' && echo "pzokookzqe kokoqze" && 1 + 1`
+    `true && true`
   );
   const parser = parse(lexe);
   console.log(parser.parsed?.toJSON());

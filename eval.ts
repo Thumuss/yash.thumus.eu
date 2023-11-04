@@ -1,23 +1,20 @@
 import { AST, Binaire, Command, Obj, Unaire, parse } from "./parser";
 import { PrimitivesJS, TypeToken, lexer } from "./lexer";
 
+type chokbar = {
+  [state in TypeToken]?: Function;
+};
 
-const operators: any = {
+const operators: chokbar = {
   [TypeToken.Number]: () => null,
   [TypeToken.Text]: () => null,
   [TypeToken.Bool]: () => null,
   [TypeToken.Argument]: () => null,
   [TypeToken.And]: function (a: PrimitivesJS, b: PrimitivesJS) {
-    if (typeof a !== "boolean" || typeof b !== "boolean") {
-      throw "I got nothing in my braiiin &&";
-    }
     return a && b;
   },
 
   [TypeToken.Or]: function (a: PrimitivesJS, b: PrimitivesJS) {
-    if (typeof a !== "boolean" || typeof b !== "boolean") {
-      throw "I got nothing in my braiiin ||";
-    }
     return a || b;
   },
 
@@ -76,7 +73,29 @@ const operators: any = {
   [TypeToken.Greater]: function () {
     console.log("on verra");
   },
+
+  [TypeToken.Eq]: (a: PrimitivesJS, b: PrimitivesJS) => {
+    return a === b;
+  },
+  [TypeToken.NotEq]: (a: PrimitivesJS, b: PrimitivesJS) => {
+    return a !== b;
+  },
+  [TypeToken.GrEq]: (a: PrimitivesJS, b: PrimitivesJS) => {
+    if (typeof a === "number" && typeof b === "number") return a >= b;
+    throw "I got nothing in my braiiin >=";
+  },
+  [TypeToken.LsEq]: (a: PrimitivesJS, b: PrimitivesJS) => {
+    if (typeof a === "number" && typeof b === "number") return a <= b;
+    throw "I got nothing in my braiiin <=";
+  },
+  //[TypeToken.PipeOut]: undefined,
+  //[TypeToken.PipeIn]: undefined,
+  //[TypeToken.Var]: undefined,
+  //[TypeToken.Assignement]: undefined,
   
+  //[TypeToken.Semicolon]: undefined,
+  //[TypeToken.LeftPar]: undefined,
+  //[TypeToken.RightPar]: undefined,
 };
 
 function evals(val: AST | undefined, jsp: (val: string[]) => any): PrimitivesJS {
@@ -84,12 +103,12 @@ function evals(val: AST | undefined, jsp: (val: string[]) => any): PrimitivesJS 
   if (val instanceof Command) return jsp(val.values);
   if (val instanceof Unaire) {
     if (operators[val.type]) {
-        return operators[val.type](evals(val.right, jsp));
+        return operators[val.type]?.(evals(val.right, jsp)) || null;
     }
   }
   if (val instanceof Binaire) {
     if (operators[val.type]) {
-        return operators[val.type](evals(val.left, jsp), evals(val.right, jsp));
+        return operators[val.type]?.(evals(val.left, jsp), evals(val.right, jsp)) || null;
     }
   }
   return null;
@@ -98,11 +117,13 @@ function evals(val: AST | undefined, jsp: (val: string[]) => any): PrimitivesJS 
 function test() {
     const jsp = (val: string[]) => val.join(" ");
 
-    const lex = lexer(`"abc " * (3 - -1)`);
+    const lex = lexer(`true && true`);
     const parser = parse(lex);
     const ev = evals(parser.parsed, jsp);
 
     console.log(ev);
 }
 
-test();
+//test();
+
+export { evals };

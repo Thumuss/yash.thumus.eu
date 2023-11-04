@@ -4,7 +4,7 @@ enum TypeToken {
   Bool = "Bool",
   Argument = "Args",
 
-  Var = "Var",       // TODO 
+  Var = "Var", // TODO
   Assignement = "=", // TODO
   Semicolon = ";", // TODO
 
@@ -15,11 +15,11 @@ enum TypeToken {
   Ampersand = "&",
   Or = "||",
   Not = "!",
-  Eq = "==",    // TODO
-  NotEq = "!=", // TODO
-  GrEq = ">=",   // TODO
-  LsEq = "<=",   // TODO
-  Greater = ">",// TODO
+  Eq = "==", 
+  NotEq = "!=", 
+  GrEq = ">=",
+  LsEq = "<=",
+  Greater = ">", 
   Less = "<",
 
   Plus = "+",
@@ -29,8 +29,8 @@ enum TypeToken {
   Modulo = "%",
   Pow = "**",
 
-  Pipe = "|",   // TODO: interface
-  PipeOut = "|>",// TODO: interface
+  Pipe = "|", // TODO: interface
+  PipeOut = "|>", // TODO: interface
   PipeIn = "<|", // TODO: interface
 }
 
@@ -79,9 +79,30 @@ function lexer(str: string): Token[] {
   while (str.length > i) {
     let element = str[i++];
     let obj: Token | undefined = undefined;
-    if (!/\d/g.test(element) && !isTextActif && isNumberActif && !isArgumentActif && !isVar) stopNumber();
-    if (!/[a-zA-Z\s]/g.test(element) && !isTextActif && !isNumberActif && isArgumentActif && !isVar) stopArgs();
-    if (!/[a-zA-Z]/g.test(element) && !isTextActif && !isNumberActif && !isArgumentActif && isVar) stopVarName();
+    if (
+      !/\d/g.test(element) &&
+      !isTextActif &&
+      isNumberActif &&
+      !isArgumentActif &&
+      !isVar
+    )
+      stopNumber();
+    if (
+      !/[a-zA-Z\s]/g.test(element) &&
+      !isTextActif &&
+      !isNumberActif &&
+      isArgumentActif &&
+      !isVar
+    )
+      stopArgs();
+    if (
+      !/[a-zA-Z]/g.test(element) &&
+      !isTextActif &&
+      !isNumberActif &&
+      !isArgumentActif &&
+      isVar
+    )
+      stopVarName();
     if (isTextActif && element != charText) {
       stacker += element;
     } else
@@ -93,15 +114,15 @@ function lexer(str: string): Token[] {
           obj = new Token(TypeToken.RightPar);
           break;
         case "&":
-          if (str[i] == "&") {
+          if (str[i] == "&" && i++) {
             obj = new Token(TypeToken.And);
-            i++;
           } else obj = new Token(TypeToken.Ampersand);
           break;
         case "|":
-          if (str[i] == "|") {
+          if (str[i] == "|" && i++) {
             obj = new Token(TypeToken.Or);
-            i++;
+          } else if (str[i] == ">" && i++) {
+            obj = new Token(TypeToken.PipeOut);
           } else {
             obj = new Token(TypeToken.Pipe);
           }
@@ -116,27 +137,38 @@ function lexer(str: string): Token[] {
           obj = new Token(TypeToken.Slash);
           break;
         case "*":
-          if (str[i] == "*") {
+          if (str[i] == "*" && i++) {
             obj = new Token(TypeToken.Pow);
-            i++;
           } else obj = new Token(TypeToken.Star);
           break;
         case ">":
-          obj = new Token(TypeToken.Greater);
+          if (str[i] == "=" && i++) obj = new Token(TypeToken.GrEq);
+          else obj = new Token(TypeToken.Greater);
           break;
         case "<":
-          obj = new Token(TypeToken.Less);
+          if (str[i] == "=" && i++) obj = new Token(TypeToken.LsEq);
+          else if (str[i] == "|" && i++) obj = new Token(TypeToken.PipeIn);
+          else obj = new Token(TypeToken.Less);
+          break;
+        case "=":
+          if (str[i] == "=" && i++) obj = new Token(TypeToken.Eq);
+          else obj = new Token(TypeToken.Assignement);
           break;
         case "!":
-          obj = new Token(TypeToken.Not);
+        case "<":
+          if (str[i] == "=" && i++) obj = new Token(TypeToken.NotEq);
+          else obj = new Token(TypeToken.Not);
+          break;
+        case ";":
+          obj = new Token(TypeToken.Semicolon);
           break;
         case "%":
           obj = new Token(TypeToken.Modulo);
           break;
         case "$":
-            isVar = true;
-            stacker += element;
-            break;
+          isVar = true;
+          stacker += element;
+          break;
 
         case '"':
           if (str[i - 2] != "\\" && (!isTextActif || charText == '"')) {
@@ -172,8 +204,7 @@ function lexer(str: string): Token[] {
             break;
           }
         case " ":
-          if (!isArgumentActif || !/[a-zA-Z]/g.test(str[i]))
-            break;
+          if (!isArgumentActif || !/[a-zA-Z]/g.test(str[i])) break;
         default:
           if (/\d/.test(element)) {
             isNumberActif = true;
@@ -182,15 +213,14 @@ function lexer(str: string): Token[] {
           }
           if (i + 2 < str.length && str.slice(i - 1, i + 3) == "true") {
             obj = new Token(TypeToken.Bool, true);
-            i += 2;
+            i += 3;
             break;
           }
           if (i + 3 < str.length && str.slice(i - 1, i + 4) == "false") {
-            i += 3;
+            i += 4;
             obj = new Token(TypeToken.Bool, false);
             break;
-          }
-          else {
+          } else {
             if (!isVar) {
               isArgumentActif = true;
             }
@@ -198,7 +228,6 @@ function lexer(str: string): Token[] {
             break;
           }
       }
-    //console.log(text, nb, element);
     if (obj) objects.push(obj);
   }
   if (isTextActif) objects.push(new Token(TypeToken.Text, stacker));
@@ -207,19 +236,6 @@ function lexer(str: string): Token[] {
     objects.push(new Token(TypeToken.Number, parseInt(stacker)));
   return objects;
 }
-
-function test() {
-  const b = (a: Token) => a.type;
-  console.log(lexer("-1+1").map(b).join(" "));
-  console.log(lexer(`1*(101+"eheh\\"eh1(2)))))'))")`).map(b).join(" "));
-  console.log(lexer(`1 * 1`).map(b).join(" "));
-  console.log(lexer(`!true / false`).map(b).join(" "));
-  console.log(lexer(`true % 10-10%/|><||&`).map(b).join(" "));
-  console.log(lexer(`aaaa + bbb`).map(b).join(" "));
-  console.log(lexer(`$aaaa + bbb`).map(b).join(" "));
-}
-
-//test()
 
 export { Token, TypeToken, lexer };
 export type { PrimitivesJS };
