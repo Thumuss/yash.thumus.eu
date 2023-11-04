@@ -1,16 +1,24 @@
+import { PrimitivesJS } from "./types";
+
 enum TypeToken {
+  // Primitives
   Number = "Number",
   Text = "Text",
   Bool = "Bool",
   Argument = "Args",
 
+  // Vars
   Var = "Var", // TODO
   Assignement = "=", // TODO
+
+  // End of a statement
   Semicolon = ";", // TODO
 
+  // Pars
   LeftPar = "(",
   RightPar = ")",
 
+  // Logical
   And = "&&",
   Ampersand = "&",
   Or = "||",
@@ -22,6 +30,7 @@ enum TypeToken {
   Greater = ">", 
   Less = "<",
 
+  // Math
   Plus = "+",
   Minus = "-",
   Slash = "/",
@@ -29,12 +38,12 @@ enum TypeToken {
   Modulo = "%",
   Pow = "**",
 
+  // Bash
   Pipe = "|", // TODO: interface
   PipeOut = "|>", // TODO: interface
   PipeIn = "<|", // TODO: interface
 }
 
-type PrimitivesJS = string | boolean | number | null;
 
 class Token {
   type: TypeToken;
@@ -238,4 +247,3 @@ function lexer(str: string): Token[] {
 }
 
 export { Token, TypeToken, lexer };
-export type { PrimitivesJS };

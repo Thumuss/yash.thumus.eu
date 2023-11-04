@@ -1,11 +1,8 @@
-import { AST, Binaire, Command, Obj, Unaire, parse } from "./parser";
-import { PrimitivesJS, TypeToken, lexer } from "./lexer";
+import type { AST, PrimitivesJS, FunctionsOperators, Bridge } from "./types";
+import { TypeToken } from "./lexer";
+import { Binary, Command, PrimitivesParsed, Unary } from "./parser";
 
-type chokbar = {
-  [state in TypeToken]?: Function;
-};
-
-const operators: chokbar = {
+const operators: FunctionsOperators = {
   [TypeToken.Number]: () => null,
   [TypeToken.Text]: () => null,
   [TypeToken.Bool]: () => null,
@@ -106,20 +103,22 @@ const operators: chokbar = {
   //[TypeToken.RightPar]: undefined,
 };
 
-async function evals(val: AST | undefined, jsp: (val: string[]) => any): Promise<PrimitivesJS> {
-  if (val instanceof Obj) return val.value;
-  if (val instanceof Command) return await jsp(val.values);
-  if (val instanceof Unaire) {
+async function evaluate(val: AST | undefined, bridge: Bridge): Promise<PrimitivesJS> {
+  if (val instanceof PrimitivesParsed) return val.value;
+  if (val instanceof Command) return  val.piped ? await bridge.exec(val.values) : await bridge.out(await bridge.exec(val.values));
+  if (val instanceof Unary) {
     if (operators[val.type]) {
-        return operators[val.type]?.(await evals(val.right, jsp)) || null;
+        return operators[val.type]?.(await evaluate(val.right, bridge)) || null;
     }
   }
-  if (val instanceof Binaire) {
+  if (val instanceof Binary) {
     if (operators[val.type]) {
-        return operators[val.type]?.(await evals(val.left, jsp), await evals(val.right, jsp)) || null;
+        return operators[val.type]?.(await evaluate(val.left, bridge), await evaluate(val.right, bridge)) || null;
     }
   }
   return null;
 }
 
-export { evals as evaluate };
+
+
+export { evaluate };

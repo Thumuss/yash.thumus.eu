@@ -1,8 +1,5 @@
-import { PrimitivesJS, Token, TypeToken, lexer } from "./lexer";
-
-type Objectss = Obj | Command;
-type Opes = Binaire | Unaire;
-type AST = Objectss | Opes;
+import { Token, TypeToken, lexer } from "./lexer";
+import { AST, NonOperators, PrimitivesJS } from "./types";
 
 const orderPriority = [
   TypeToken.PipeOut,
@@ -29,7 +26,7 @@ const orderPriority = [
 
   TypeToken.PipeIn,
 ];
-class Obj {
+class PrimitivesParsed {
   type: TypeToken;
   value: PrimitivesJS;
 
@@ -38,8 +35,8 @@ class Obj {
     this.value = value;
   }
 
-  static into(token: Token): Obj {
-    return new Obj(token.type, token.value);
+  static into(token: Token): PrimitivesParsed {
+    return new PrimitivesParsed(token.type, token.value);
   }
 
   toJSON() {
@@ -53,12 +50,13 @@ class Obj {
 class Command {
   type: TypeToken = TypeToken.Argument;
   values: string[];
+  piped: boolean = false;
 
   constructor(token: Token) {
     this.values = (token.value as string).split(" ");
   }
 
-  add(token: Objectss) {
+  add(token: NonOperators) {
     if (token instanceof Command) {
       this.values.concat(token.values);
     } else if (token.type == TypeToken.Argument) {
@@ -80,7 +78,7 @@ class Command {
   }
 }
 
-class Binaire {
+class Binary {
   type: TypeToken;
   left?: AST;
   right?: AST;
@@ -100,15 +98,15 @@ class Binaire {
     };
   }
 
-  static into(token: Token): Binaire {
-    return new Binaire(
+  static into(token: Token): Binary {
+    return new Binary(
       token.type,
       token.plus + orderPriority.findIndex((a) => a == token.type)
     );
   }
 }
 
-class Unaire {
+class Unary {
   type: TypeToken;
   right?: AST;
   priority: number;
@@ -118,8 +116,8 @@ class Unaire {
     this.priority = priority;
   }
 
-  static into(token: Token): Unaire {
-    return new Unaire(
+  static into(token: Token): Unary {
+    return new Unary(
       token.type,
       token.plus + orderPriority.findIndex((a) => a == token.type)
     );
@@ -149,11 +147,18 @@ class Parser {
   }
 
   end(): boolean {
-    return this.findNext(TypeToken.Semicolon) == this.current || this.tokens.length == this.current;
+    return (
+      this.findNext(TypeToken.Semicolon) == this.current ||
+      this.tokens.length == this.current
+    );
   }
 
   currentToken(): Token {
     return this.tokens[this.current];
+  }
+
+  isToken(...args: TypeToken[]): boolean {
+    return args.includes(this.currentToken().type);
   }
 
   before(nb: number = 1): Token {
@@ -173,8 +178,8 @@ class Parser {
   findNext(type: TypeToken): number {
     return this.tokens.slice(this.current).findIndex((a) => a.type == type);
   }
-  addObj(obj: Objectss, parsed = this.parsed) {
-    if (parsed instanceof Obj) throw "Error";
+  addObj(obj: NonOperators, parsed = this.parsed) {
+    if (parsed instanceof PrimitivesParsed) throw "Error";
     if (
       parsed instanceof Command &&
       (obj.type == TypeToken.Argument ||
@@ -185,14 +190,17 @@ class Parser {
       return parsed.add(obj);
     if (parsed instanceof Command) throw "Error";
     if (parsed === undefined) return (this.parsed = obj);
-    if (!(parsed instanceof Unaire) && !parsed.left) return (parsed.left = obj);
+    if (!(parsed instanceof Unary) && !parsed.left) return (parsed.left = obj);
     if (!parsed.right) return (parsed.right = obj);
     this.addObj(obj, parsed.right);
   }
 
-  addOpBin(obj: Binaire) {
+  addOpBin(obj: Binary) {
     if (this.parsed === undefined) throw "Error";
-    if (this.parsed instanceof Obj || this.parsed instanceof Command) {
+    if (
+      this.parsed instanceof PrimitivesParsed ||
+      this.parsed instanceof Command
+    ) {
       obj.left = this.parsed;
       this.parsed = obj;
     } else {
@@ -206,8 +214,11 @@ class Parser {
     }
   }
 
-  addOpUna(obj: Unaire) {
-    if (this.parsed instanceof Obj || this.parsed instanceof Command)
+  addOpUna(obj: Unary) {
+    if (
+      this.parsed instanceof PrimitivesParsed ||
+      this.parsed instanceof Command
+    )
       throw "Error";
     if (this.parsed === undefined) return (this.parsed = obj);
     if (obj.priority > this.parsed.priority) {
@@ -220,9 +231,9 @@ class Parser {
   }
 
   add(obj: AST) {
-    if (obj instanceof Obj || obj instanceof Command) {
+    if (obj instanceof PrimitivesParsed || obj instanceof Command) {
       this.addObj(obj);
-    } else if (obj instanceof Binaire) {
+    } else if (obj instanceof Binary) {
       this.addOpBin(obj);
     } else {
       this.addOpUna(obj);
@@ -236,20 +247,20 @@ function baseObj(token: Token, p: Parser, priority: number = 1) {
     p.add(obj);
     p.next();
   } else {
-    const obj = Obj.into(token);
+    const obj = PrimitivesParsed.into(token);
     p.add(obj);
     p.next();
   }
 }
 
 function baseOpeBinaire(token: Token, p: Parser) {
-  const obj = Binaire.into(token);
+  const obj = Binary.into(token);
   p.add(obj);
   p.next();
 }
 
 function baseOpeUnaire(token: Token, p: Parser) {
-  const obj = Unaire.into(token);
+  const obj = Unary.into(token);
   p.add(obj);
   p.next();
 }
@@ -272,54 +283,56 @@ function consumeParen(p: Parser) {
     const token = p.currentToken();
     if (token.type == TypeToken.LeftPar) {
       i++;
-      p.consume();
     } else if (token.type == TypeToken.RightPar) {
       i--;
       if (i < 0) throw "< hm hm";
-      p.consume();
     } else {
       token.plus += i * 100;
-      p.next();
     }
+    p.next();
   }
   p.current = 0;
+}
+
+function isToken(token: Token, ...tokensTypes: TypeToken[]) {
+  return tokensTypes.includes(token.type);
 }
 
 function parse(tokens: Token[]): Parser {
   const p = new Parser(tokens);
   consumeParen(p);
   while (!p.end()) {
-    const currentToken = p.currentToken();
+    const t = p.currentToken();
+    if (isToken(t, TypeToken.LeftPar, TypeToken.RightPar)) {
+      continue;
+    }
     if (
-      [
+      isToken(
+        t,
         TypeToken.Argument,
         TypeToken.Text,
         TypeToken.Bool,
-        TypeToken.Number,
-      ].includes(currentToken.type)
+        TypeToken.Number
+      )
     ) {
-      baseObj(currentToken, p);
-    } else if (currentToken.type == TypeToken.Minus) {
-      minus(currentToken, p);
-    } else if (
-      [TypeToken.Ampersand, TypeToken.Not].includes(currentToken.type)
-    ) {
-      baseOpeUnaire(currentToken, p);
+      baseObj(t, p);
+    } else if (isToken(t, TypeToken.Minus)) {
+      minus(t, p);
+    } else if (isToken(t, TypeToken.Ampersand, TypeToken.Not)) {
+      baseOpeUnaire(t, p);
     } else {
-      baseOpeBinaire(currentToken, p);
+      baseOpeBinaire(t, p);
     }
   }
   return p;
 }
-function test() {
-  const lexe = lexer(
-    `true && true`
-  );
-  const parser = parse(lexe);
-  console.log(parser.parsed?.toJSON());
-}
 
-//test();
-
-export { orderPriority, Obj, Command, Binaire, Unaire, Parser, parse };
-export type { Objectss, Opes, AST };
+export {
+  orderPriority,
+  PrimitivesParsed,
+  Command,
+  Binary,
+  Unary,
+  Parser,
+  parse,
+};
