@@ -66,11 +66,11 @@ const operators: chokbar = {
     console.log("on verra");
   },
 
-  [TypeToken.Less]: function () {
+  [TypeToken.PipeIn]: function () {
     console.log("on verra");
   },
 
-  [TypeToken.Greater]: function () {
+  [TypeToken.PipeOut]: function () {
     console.log("on verra");
   },
 
@@ -79,6 +79,14 @@ const operators: chokbar = {
   },
   [TypeToken.NotEq]: (a: PrimitivesJS, b: PrimitivesJS) => {
     return a !== b;
+  },
+  [TypeToken.Less]: (a: PrimitivesJS, b: PrimitivesJS) => {
+    if (typeof a === "number" && typeof b === "number") return a < b;
+    throw "I got nothing in my braiiin <";
+  },
+  [TypeToken.Greater]: (a: PrimitivesJS, b: PrimitivesJS) => {
+    if (typeof a === "number" && typeof b === "number") return a > b;
+    throw "I got nothing in my braiiin >";
   },
   [TypeToken.GrEq]: (a: PrimitivesJS, b: PrimitivesJS) => {
     if (typeof a === "number" && typeof b === "number") return a >= b;
@@ -98,32 +106,20 @@ const operators: chokbar = {
   //[TypeToken.RightPar]: undefined,
 };
 
-function evals(val: AST | undefined, jsp: (val: string[]) => any): PrimitivesJS {
+async function evals(val: AST | undefined, jsp: (val: string[]) => any): Promise<PrimitivesJS> {
   if (val instanceof Obj) return val.value;
-  if (val instanceof Command) return jsp(val.values);
+  if (val instanceof Command) return await jsp(val.values);
   if (val instanceof Unaire) {
     if (operators[val.type]) {
-        return operators[val.type]?.(evals(val.right, jsp)) || null;
+        return operators[val.type]?.(await evals(val.right, jsp)) || null;
     }
   }
   if (val instanceof Binaire) {
     if (operators[val.type]) {
-        return operators[val.type]?.(evals(val.left, jsp), evals(val.right, jsp)) || null;
+        return operators[val.type]?.(await evals(val.left, jsp), await evals(val.right, jsp)) || null;
     }
   }
   return null;
 }
 
-function test() {
-    const jsp = (val: string[]) => val.join(" ");
-
-    const lex = lexer(`true && true`);
-    const parser = parse(lex);
-    const ev = evals(parser.parsed, jsp);
-
-    console.log(ev);
-}
-
-//test();
-
-export { evals };
+export { evals as evaluate };
