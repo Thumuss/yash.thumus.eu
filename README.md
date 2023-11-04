@@ -1,5 +1,5 @@
 # YASH
-> Yet An other SHell
+> **Y**et **A**n other **SH**ell
 
 # Run
 You need `bun` for simplicity or anything that can compile typescript.
