@@ -42,6 +42,29 @@ enum TypeToken {
   Pipe = "|", // TODO: interface
   PipeOut = "|>", // TODO: interface
   PipeIn = "<|", // TODO: interface
+
+  // Keywords of bash
+  If = "if",
+  Then = "then",
+  Elif = "elif",
+  Else = "else",
+  Fi = "Fi",
+  Time = "time",
+  For = "for",
+  In = "in",
+  Until = "until",
+  While = "While",
+  Do = "do",
+  Done = "done",
+  Case = "case",
+  Esac = "esac",
+  Coproc = "coproc",
+  Select = "select",
+  Function = "function",
+  LeftBracket = "{",
+  RightBracket = "}",
+  DoubleLeftSqB = "[[",
+  DoubleRightSqB = "]]",
 }
 
 

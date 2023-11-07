@@ -1,4 +1,5 @@
 import { Token, TypeToken, lexer } from "./lexer";
+import { operators, primitives } from "./parser/exportParser";
 import { AST, NonOperators, PrimitivesJS } from "./types";
 
 const orderPriority = [
@@ -133,28 +134,24 @@ class Unary {
 
 class Parser {
   tokens: Token[];
-  current: number;
-  parsed?: AST;
+  currentIdToken: number = 0;
+  parsed: AST[] = [];
+  currentIdAst: number = 0;
 
   constructor(tokens: Token[]) {
     this.tokens = tokens;
-    this.current = 0;
-    this.parsed = undefined;
   }
 
   next(): void {
-    this.current++;
+    this.currentIdToken++;
   }
 
   end(): boolean {
-    return (
-      this.findNext(TypeToken.Semicolon) == this.current ||
-      this.tokens.length == this.current
-    );
+    return this.tokens.length == this.currentIdToken;
   }
 
   currentToken(): Token {
-    return this.tokens[this.current];
+    return this.tokens[this.currentIdToken];
   }
 
   isToken(...args: TypeToken[]): boolean {
@@ -162,23 +159,23 @@ class Parser {
   }
 
   before(nb: number = 1): Token {
-    return this.tokens[this.current - nb];
+    return this.tokens[this.currentIdToken - nb];
   }
 
   nextToken(nb: number = 1): Token {
-    return this.tokens[this.current + nb];
+    return this.tokens[this.currentIdToken + nb];
   }
 
   consume() {
     this.tokens = this.tokens
-      .slice(0, this.current)
-      .concat(this.tokens.slice(this.current + 1));
+      .slice(0, this.currentIdToken)
+      .concat(this.tokens.slice(this.currentIdToken + 1));
   }
 
   findNext(type: TypeToken): number {
-    return this.tokens.slice(this.current).findIndex((a) => a.type == type);
+    return this.tokens.slice(this.currentIdToken).findIndex((a) => a.type == type);
   }
-  addObj(obj: NonOperators, parsed = this.parsed) {
+  addObj(obj: NonOperators, parsed = this.parsed[this.currentIdAst]) {
     if (parsed instanceof PrimitivesParsed) throw "Error";
     if (
       parsed instanceof Command &&
@@ -189,44 +186,46 @@ class Parser {
     )
       return parsed.add(obj);
     if (parsed instanceof Command) throw "Error";
-    if (parsed === undefined) return (this.parsed = obj);
+    if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
     if (!(parsed instanceof Unary) && !parsed.left) return (parsed.left = obj);
     if (!parsed.right) return (parsed.right = obj);
     this.addObj(obj, parsed.right);
   }
 
   addOpBin(obj: Binary) {
-    if (this.parsed === undefined) throw "Error";
+    const parsed = this.parsed[this.currentIdAst];
+    if (parsed === undefined) throw "Error";
     if (
-      this.parsed instanceof PrimitivesParsed ||
-      this.parsed instanceof Command
+      parsed instanceof PrimitivesParsed ||
+      parsed instanceof Command
     ) {
-      obj.left = this.parsed;
-      this.parsed = obj;
+      obj.left = parsed;
+      this.parsed[this.currentIdAst] = obj;
     } else {
-      if (obj.priority > this.parsed.priority) {
-        obj.left = this.parsed.right;
-        this.parsed.right = obj;
+      if (obj.priority > parsed.priority) {
+        obj.left = parsed.right;
+        (this.parsed[this.currentIdAst] as Binary).right = obj;
       } else {
-        obj.left = this.parsed;
-        this.parsed = obj;
+        obj.left = parsed;
+        this.parsed[this.currentIdAst] = obj;
       }
     }
   }
 
   addOpUna(obj: Unary) {
+    const parsed = this.parsed[this.currentIdAst];
     if (
-      this.parsed instanceof PrimitivesParsed ||
-      this.parsed instanceof Command
+      parsed instanceof PrimitivesParsed ||
+      parsed instanceof Command
     )
       throw "Error";
-    if (this.parsed === undefined) return (this.parsed = obj);
-    if (obj.priority > this.parsed.priority) {
-      obj.right = this.parsed.right;
-      this.parsed.right = obj;
+    if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
+    if (obj.priority > parsed.priority) {
+      obj.right = parsed.right;
+      (this.parsed[this.currentIdAst] as Unary).right = obj;
     } else {
-      obj.right = this.parsed;
-      this.parsed = obj;
+      obj.right = parsed;
+      this.parsed[this.currentIdAst] = obj;
     }
   }
 
@@ -238,42 +237,6 @@ class Parser {
     } else {
       this.addOpUna(obj);
     }
-  }
-}
-
-function baseObj(token: Token, p: Parser, priority: number = 1) {
-  if (token.type === TypeToken.Argument) {
-    const obj = new Command(token);
-    p.add(obj);
-    p.next();
-  } else {
-    const obj = PrimitivesParsed.into(token);
-    p.add(obj);
-    p.next();
-  }
-}
-
-function baseOpeBinaire(token: Token, p: Parser) {
-  const obj = Binary.into(token);
-  p.add(obj);
-  p.next();
-}
-
-function baseOpeUnaire(token: Token, p: Parser) {
-  const obj = Unary.into(token);
-  p.add(obj);
-  p.next();
-}
-
-function minus(token: Token, p: Parser) {
-  if (
-    p.before()?.type != TypeToken.Number &&
-    p.nextToken().type == TypeToken.Number
-  ) {
-    p.consume();
-    (p.currentToken().value as number) *= -1;
-  } else {
-    baseOpeBinaire(token, p);
   }
 }
 
@@ -291,48 +254,99 @@ function consumeParen(p: Parser) {
     }
     p.next();
   }
-  p.current = 0;
+  p.currentIdToken = 0;
 }
 
-function isToken(token: Token, ...tokensTypes: TypeToken[]) {
-  return tokensTypes.includes(token.type);
-}
 
 function parse(tokens: Token[]): Parser {
   const p = new Parser(tokens);
   consumeParen(p);
   while (!p.end()) {
     const t = p.currentToken();
-    if (isToken(t, TypeToken.LeftPar, TypeToken.RightPar)) {
-      continue;
-    }
-    if (
-      isToken(
-        t,
-        TypeToken.Argument,
-        TypeToken.Text,
-        TypeToken.Bool,
-        TypeToken.Number
-      )
-    ) {
-      baseObj(t, p);
-    } else if (isToken(t, TypeToken.Minus)) {
-      minus(t, p);
-    } else if (isToken(t, TypeToken.Ampersand, TypeToken.Not)) {
-      baseOpeUnaire(t, p);
-    } else {
-      baseOpeBinaire(t, p);
+    switch (t.type) {
+      case TypeToken.Ampersand:
+        operators.ampersand(t, p)
+        break;
+      case TypeToken.And:
+        operators.and(t, p)
+        break;
+      case TypeToken.Argument:
+        primitives.argument(t, p);
+        break;
+      case TypeToken.Assignement:
+        break;
+      case TypeToken.Bool:
+        primitives.bool(t, p);
+        break;
+      case TypeToken.Eq:
+        operators.equal(t, p)
+        break;
+      case TypeToken.GrEq:
+        operators.greaterequal(t, p)
+        break;
+      case TypeToken.Greater:
+        operators.greater(t, p)
+        break;
+      case TypeToken.LeftPar:
+        break;
+      case TypeToken.Less:
+        operators.less(t, p)
+        break;
+      case TypeToken.LsEq:
+        operators.lessequal(t, p)
+        break;
+      case TypeToken.Minus:
+        operators.minus(t, p)
+        break;
+      case TypeToken.Modulo:
+        operators.modulo(t, p)
+        break;
+      case TypeToken.Not:
+        operators.not(t, p)
+        break;
+      case TypeToken.NotEq:
+        operators.notequal(t, p)
+        break;
+      case TypeToken.Number:
+        primitives.nums(t, p);
+        break;
+      case TypeToken.Or:
+        operators.or(t, p)
+        break;
+      case TypeToken.Pipe:
+        operators.pipe(t, p)
+        break;
+      case TypeToken.PipeIn:
+        operators.pipein(t, p)
+        break;
+      case TypeToken.PipeOut:
+        operators.pipeout(t, p)
+        break;
+      case TypeToken.Plus:
+        operators.plus(t, p)
+        break;
+      case TypeToken.Pow:
+        operators.pow(t, p)
+        break;
+      case TypeToken.RightPar:
+        break;
+      case TypeToken.Semicolon:
+        break;
+      case TypeToken.Slash:
+        operators.slash(t, p)
+        break;
+      case TypeToken.Star:
+        break;
+      case TypeToken.Text:
+        primitives.text(t, p);
+        break;
+      case TypeToken.Var:
+        break;
+      default:
+        break;
     }
   }
   return p;
 }
 
-export {
-  orderPriority,
-  PrimitivesParsed,
-  Command,
-  Binary,
-  Unary,
-  Parser,
-  parse,
-};
+export { PrimitivesParsed, Command, Binary, Unary, Parser, parse };

@@ -7,6 +7,7 @@ type FunctionsOperators = {
 
 interface Bridge {
   out: (...args: PrimitivesJS[]) => Promise<void> | void;
+  err: (...args: PrimitivesJS[]) => Promise<void> | void;
   exec: (vals: string[]) => Promise<any> | any;
 }
 

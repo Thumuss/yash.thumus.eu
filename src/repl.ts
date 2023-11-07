@@ -3,23 +3,33 @@ import { evaluate, lexer, parse, types } from "./import";
 async function run(str: string, inter: types.Bridge) {
   const lexed = lexer(str);
   const parsed = parse(lexed).parsed;
-  inter.out(await evaluate(parsed, inter));
+  try {
+    const evld = await evaluate(parsed[0], inter);
+    if (evld) {
+      await inter.out(evld);
+    }
+  } catch (e: any) {
+    inter.err(e);
+  }
 }
 
 const promptMessage = "yash >> ";
 const helpMessage = "Welcome to the REPL of YASH\nType `?` to get help";
 if (Bun) {
   const out = (...args: types.PrimitivesJS[]): void => {
-    Bun.write(Bun.stdout, args.map(String).join(" "));
+    let wri = args.map(String).join(" ");
+    if (!wri.endsWith("\n")) wri += "\n"
+    Bun.write(Bun.stdout, wri);
   };
 
   const exec = async (vals: string[]) => {
     const proc = Bun.spawn(vals);
     return await new Response(proc.stdout).text();
   };
- 
+
   const bridge: types.Bridge = {
     out,
+    err: out,
     exec,
   };
 
