@@ -1,4 +1,4 @@
-import type { Token } from "../lexer";
+import { TypeToken, type Token } from "../lexer";
 import { Command, Parser, PrimitivesParsed } from "../parser";
 import type { NonOperators } from "../types";
 
@@ -21,6 +21,11 @@ function bool (t: Token, p: Parser) {
 }
 
 function argument(t: Token, p: Parser) {
+    if (p.before()?.type == TypeToken.Function) {
+        // Ajout à la class fonction qui nomme donc la fonction
+    } else if (p.nextToken()?.type == TypeToken.LeftPar) {
+        // créer une fonction littéralement
+    } else 
     literal(t, p, new Command(t));
 }
 

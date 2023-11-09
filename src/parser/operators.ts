@@ -97,6 +97,11 @@ function pipein(t: Token, p: Parser) {
   binary(t, p);
 }
 
+function semicolon(t: Token, p: Parser) {
+  p.currentIdAst++;
+  p.next()
+}
+
 export {
   and,
   ampersand,
@@ -110,6 +115,7 @@ export {
   less,
   plus,
   minus,
+  semicolon,
   slash,
   star,
   modulo,

@@ -2,7 +2,9 @@ import { Token, TypeToken, lexer } from "./lexer";
 import { operators, primitives } from "./parser/exportParser";
 import { AST, NonOperators, PrimitivesJS } from "./types";
 
-const orderPriority = [
+const orderPriority: TypeToken[] = [
+  TypeToken.Semicolon,
+
   TypeToken.PipeOut,
   TypeToken.Ampersand,
   TypeToken.Pipe,
@@ -132,6 +134,24 @@ class Unary {
   }
 }
 
+class Keyword {
+  type: TypeToken;
+
+  constructor(type: TypeToken) {
+    this.type = type;
+  }
+
+  static into(token: Token): Keyword {
+    return new Keyword(token.type);
+  }
+
+  toJSON(): any {
+    return {
+      type: this.type,
+    };
+  }
+}
+
 class Parser {
   tokens: Token[];
   currentIdToken: number = 0;
@@ -173,10 +193,13 @@ class Parser {
   }
 
   findNext(type: TypeToken): number {
-    return this.tokens.slice(this.currentIdToken).findIndex((a) => a.type == type);
+    return this.tokens
+      .slice(this.currentIdToken)
+      .findIndex((a) => a.type == type);
   }
   addObj(obj: NonOperators, parsed = this.parsed[this.currentIdAst]) {
-    if (parsed instanceof PrimitivesParsed) throw "Error";
+    if (parsed instanceof PrimitivesParsed || parsed instanceof Block)
+      throw "Error";
     if (
       parsed instanceof Command &&
       (obj.type == TypeToken.Argument ||
@@ -194,11 +217,8 @@ class Parser {
 
   addOpBin(obj: Binary) {
     const parsed = this.parsed[this.currentIdAst];
-    if (parsed === undefined) throw "Error";
-    if (
-      parsed instanceof PrimitivesParsed ||
-      parsed instanceof Command
-    ) {
+    if (parsed === undefined || parsed instanceof Block) throw "Error";
+    if (parsed instanceof PrimitivesParsed || parsed instanceof Command) {
       obj.left = parsed;
       this.parsed[this.currentIdAst] = obj;
     } else {
@@ -216,7 +236,8 @@ class Parser {
     const parsed = this.parsed[this.currentIdAst];
     if (
       parsed instanceof PrimitivesParsed ||
-      parsed instanceof Command
+      parsed instanceof Command ||
+      parsed instanceof Block
     )
       throw "Error";
     if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
@@ -229,46 +250,52 @@ class Parser {
     }
   }
 
+  addBlock(obj: Block) {
+    if (!this.parsed !== undefined) this.currentIdAst++; // Les fonctions n'étant pas impl on va rester sur ça
+    this.parsed[this.currentIdAst] = obj;
+    this.currentIdAst++;
+  }
+
   add(obj: AST) {
     if (obj instanceof PrimitivesParsed || obj instanceof Command) {
       this.addObj(obj);
     } else if (obj instanceof Binary) {
       this.addOpBin(obj);
-    } else {
+    } else if (obj instanceof Unary) {
       this.addOpUna(obj);
-    }
-  }
-}
-
-function consumeParen(p: Parser) {
-  let i = 0;
-  while (!p.end()) {
-    const token = p.currentToken();
-    if (token.type == TypeToken.LeftPar) {
-      i++;
-    } else if (token.type == TypeToken.RightPar) {
-      i--;
-      if (i < 0) throw "< hm hm";
     } else {
-      token.plus += i * 100;
+      this.addBlock(obj);
     }
-    p.next();
   }
-  p.currentIdToken = 0;
 }
 
+class Block {
+  type: TypeToken;
+  parser: Parser;
+
+  constructor(type: TypeToken, tokens: Token[]) {
+    this.type = type;
+    this.parser = parse(tokens);
+  }
+
+  toJSON(): any {
+    return this.parser.parsed.map((a) => a.toJSON());
+  }
+}
 
 function parse(tokens: Token[]): Parser {
   const p = new Parser(tokens);
-  consumeParen(p);
+  //consumeParen(p);
+  let i = 0;
   while (!p.end()) {
     const t = p.currentToken();
+    t.plus = i * 100;
     switch (t.type) {
       case TypeToken.Ampersand:
-        operators.ampersand(t, p)
+        operators.ampersand(t, p);
         break;
       case TypeToken.And:
-        operators.and(t, p)
+        operators.and(t, p);
         break;
       case TypeToken.Argument:
         primitives.argument(t, p);
@@ -279,61 +306,64 @@ function parse(tokens: Token[]): Parser {
         primitives.bool(t, p);
         break;
       case TypeToken.Eq:
-        operators.equal(t, p)
+        operators.equal(t, p);
         break;
       case TypeToken.GrEq:
-        operators.greaterequal(t, p)
+        operators.greaterequal(t, p);
         break;
       case TypeToken.Greater:
-        operators.greater(t, p)
+        operators.greater(t, p);
         break;
       case TypeToken.LeftPar:
+        i++;
         break;
       case TypeToken.Less:
-        operators.less(t, p)
+        operators.less(t, p);
         break;
       case TypeToken.LsEq:
-        operators.lessequal(t, p)
+        operators.lessequal(t, p);
         break;
       case TypeToken.Minus:
-        operators.minus(t, p)
+        operators.minus(t, p);
         break;
       case TypeToken.Modulo:
-        operators.modulo(t, p)
+        operators.modulo(t, p);
         break;
       case TypeToken.Not:
-        operators.not(t, p)
+        operators.not(t, p);
         break;
       case TypeToken.NotEq:
-        operators.notequal(t, p)
+        operators.notequal(t, p);
         break;
       case TypeToken.Number:
         primitives.nums(t, p);
         break;
       case TypeToken.Or:
-        operators.or(t, p)
+        operators.or(t, p);
         break;
       case TypeToken.Pipe:
-        operators.pipe(t, p)
+        operators.pipe(t, p);
         break;
       case TypeToken.PipeIn:
-        operators.pipein(t, p)
+        operators.pipein(t, p);
         break;
       case TypeToken.PipeOut:
-        operators.pipeout(t, p)
+        operators.pipeout(t, p);
         break;
       case TypeToken.Plus:
-        operators.plus(t, p)
+        operators.plus(t, p);
         break;
       case TypeToken.Pow:
-        operators.pow(t, p)
+        operators.pow(t, p);
         break;
       case TypeToken.RightPar:
+        i--;
         break;
       case TypeToken.Semicolon:
+        operators.semicolon(t, p);
         break;
       case TypeToken.Slash:
-        operators.slash(t, p)
+        operators.slash(t, p);
         break;
       case TypeToken.Star:
         break;
@@ -349,4 +379,13 @@ function parse(tokens: Token[]): Parser {
   return p;
 }
 
-export { PrimitivesParsed, Command, Binary, Unary, Parser, parse };
+export {
+  PrimitivesParsed,
+  Command,
+  Binary,
+  Unary,
+  Parser,
+  Keyword,
+  Block,
+  parse,
+};

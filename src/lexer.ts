@@ -13,6 +13,7 @@ enum TypeToken {
 
   // End of a statement
   Semicolon = ";", // TODO
+  Comma = ",", // TODO
 
   // Pars
   LeftPar = "(",
@@ -23,11 +24,11 @@ enum TypeToken {
   Ampersand = "&",
   Or = "||",
   Not = "!",
-  Eq = "==", 
-  NotEq = "!=", 
+  Eq = "==",
+  NotEq = "!=",
   GrEq = ">=",
   LsEq = "<=",
-  Greater = ">", 
+  Greater = ">",
   Less = "<",
 
   // Math
@@ -48,12 +49,12 @@ enum TypeToken {
   Then = "then",
   Elif = "elif",
   Else = "else",
-  Fi = "Fi",
+  Fi = "fi",
   Time = "time",
   For = "for",
   In = "in",
   Until = "until",
-  While = "While",
+  While = "while",
   Do = "do",
   Done = "done",
   Case = "case",
@@ -65,8 +66,9 @@ enum TypeToken {
   RightBracket = "}",
   DoubleLeftSqB = "[[",
   DoubleRightSqB = "]]",
-}
 
+  Help = "?",
+}
 
 class Token {
   type: TypeToken;
@@ -108,33 +110,39 @@ function lexer(str: string): Token[] {
     stacker = "";
   }
 
+  const keywords = [
+    "true",
+    "false",
+    "if",
+    "then",
+    "elif",
+    "else",
+    "fi",
+    "time",
+    "for",
+    "in",
+    "until",
+    "While",
+    "do",
+    "done",
+    "case",
+    "esac",
+    "coproc",
+    "select",
+    "function",
+  ];
+
+  function matchKeyword(word: string) {
+    const wl = word.length;
+    return i + wl - 2 < str.length && str.slice(i - 1, i + wl - 1) === word;
+  }
+
   while (str.length > i) {
     let element = str[i++];
     let obj: Token | undefined = undefined;
-    if (
-      !/\d/g.test(element) &&
-      !isTextActif &&
-      isNumberActif &&
-      !isArgumentActif &&
-      !isVar
-    )
-      stopNumber();
-    if (
-      !/[a-zA-Z\s]/g.test(element) &&
-      !isTextActif &&
-      !isNumberActif &&
-      isArgumentActif &&
-      !isVar
-    )
-      stopArgs();
-    if (
-      !/[a-zA-Z]/g.test(element) &&
-      !isTextActif &&
-      !isNumberActif &&
-      !isArgumentActif &&
-      isVar
-    )
-      stopVarName();
+    if (!/\d/g.test(element) && isNumberActif) stopNumber();
+    if (!/[a-zA-Z]/g.test(element) && isArgumentActif) stopArgs();
+    if (!/[a-zA-Z]/g.test(element) && isVar) stopVarName();
     if (isTextActif && element != charText) {
       stacker += element;
     } else
@@ -194,6 +202,12 @@ function lexer(str: string): Token[] {
         case ";":
           obj = new Token(TypeToken.Semicolon);
           break;
+        case "{":
+          obj = new Token(TypeToken.LeftBracket);
+          break;
+        case "}":
+          obj = new Token(TypeToken.RightBracket);
+          break;
         case "%":
           obj = new Token(TypeToken.Modulo);
           break;
@@ -201,7 +215,16 @@ function lexer(str: string): Token[] {
           isVar = true;
           stacker += element;
           break;
-
+        case "[":
+          if (str[i] == "[") {
+            obj = new Token(TypeToken.DoubleLeftSqB);
+          }
+          break;
+        case "]":
+          if (str[i] == "]") {
+            obj = new Token(TypeToken.DoubleLeftSqB);
+          }
+          break;
         case '"':
           if (str[i - 2] != "\\" && (!isTextActif || charText == '"')) {
             isTextActif = !isTextActif;
@@ -235,30 +258,40 @@ function lexer(str: string): Token[] {
             }
             break;
           }
+        case ",":
+          obj = new Token(TypeToken.Comma);
+          break;
         case " ":
-          if (!isArgumentActif || !/[a-zA-Z]/g.test(str[i])) break;
+          if (!isArgumentActif) break;
         default:
           if (/\d/.test(element)) {
             isNumberActif = true;
             stacker += element;
             break;
           }
-          if (i + 2 < str.length && str.slice(i - 1, i + 3) == "true") {
-            obj = new Token(TypeToken.Bool, true);
-            i += 3;
-            break;
+          let matched = false;
+          for (let keyw of keywords) {
+            if (matchKeyword(keyw)) {
+              let o = keyw === "true" || keyw === "false" ? "bool" : keyw;
+              obj = new Token(
+                (TypeToken as any)[o[0].toUpperCase() + o.slice(1)],
+                keyw === "true" || keyw === "false" ? keyw === "true" : keyw
+              );
+              i += keyw.length - 1;
+              matched = true;
+              break;
+            }
           }
-          if (i + 3 < str.length && str.slice(i - 1, i + 4) == "false") {
-            i += 4;
-            obj = new Token(TypeToken.Bool, false);
-            break;
-          } else {
+
+          if (!matched) {
             if (!isVar) {
               isArgumentActif = true;
             }
             stacker += element;
             break;
           }
+
+          break;
       }
     if (obj) objects.push(obj);
   }
@@ -266,6 +299,7 @@ function lexer(str: string): Token[] {
   if (isArgumentActif) objects.push(new Token(TypeToken.Argument, stacker));
   if (isNumberActif)
     objects.push(new Token(TypeToken.Number, parseInt(stacker)));
+  console.log(objects);
   return objects;
 }
 
