@@ -3,6 +3,24 @@ import { operators, primitives } from "./parser/exportParser";
 import { AST, NonOperators, PrimitivesJS } from "./types";
 
 const orderPriority: TypeToken[] = [
+  TypeToken.If,
+  TypeToken.Then,
+  TypeToken.Elif,
+  TypeToken.Else,
+  TypeToken.Fi,
+  TypeToken.Time,
+  TypeToken.For,
+  TypeToken.In,
+  TypeToken.Until,
+  TypeToken.While,
+  TypeToken.Do,
+  TypeToken.Done,
+  TypeToken.Case,
+  TypeToken.Esac,
+  TypeToken.Coproc,
+  TypeToken.Select,
+  TypeToken.Function,
+
   TypeToken.Semicolon,
 
   TypeToken.PipeOut,
@@ -28,6 +46,12 @@ const orderPriority: TypeToken[] = [
   TypeToken.Pow,
 
   TypeToken.PipeIn,
+  TypeToken.DoubleLeftSqB,
+  TypeToken.DoubleRightSqB,
+  TypeToken.LeftBracket,
+  TypeToken.RightBracket,
+
+  TypeToken.Help
 ];
 class PrimitivesParsed {
   type: TypeToken;
@@ -157,7 +181,7 @@ class Parser {
   currentIdToken: number = 0;
   parsed: AST[] = [];
   currentIdAst: number = 0;
-
+  lastItem?: AST;
   constructor(tokens: Token[]) {
     this.tokens = tokens;
   }
@@ -182,7 +206,7 @@ class Parser {
     return this.tokens[this.currentIdToken - nb];
   }
 
-  nextToken(nb: number = 1): Token {
+  after(nb: number = 1): Token {
     return this.tokens[this.currentIdToken + nb];
   }
 
@@ -257,6 +281,7 @@ class Parser {
   }
 
   add(obj: AST) {
+    this.lastItem = obj;
     if (obj instanceof PrimitivesParsed || obj instanceof Command) {
       this.addObj(obj);
     } else if (obj instanceof Binary) {
@@ -366,16 +391,20 @@ function parse(tokens: Token[]): Parser {
         operators.slash(t, p);
         break;
       case TypeToken.Star:
+        operators.star(t, p);
         break;
       case TypeToken.Text:
         primitives.text(t, p);
         break;
       case TypeToken.Var:
         break;
+
       default:
+        p.consume();
         break;
     }
   }
+  //console.log(p)
   return p;
 }
 

@@ -5,10 +5,23 @@ type FunctionsOperators = {
   [state in TypeToken]?: Function;
 };
 
+type ReturnYash = PrimitivesJS | void | PrimitivesJS[]
+type Promised<T> = Promise<T> | T
+
+interface FunctionsYash {
+  [name: string]: (...args: PrimitivesJS[]) => Promised<ReturnYash>;
+}
+
+interface VariablesYash {
+  [name: string]: PrimitivesJS
+}
+
 interface Bridge {
-  out: (...args: PrimitivesJS[]) => Promise<void> | void;
-  err: (...args: PrimitivesJS[]) => Promise<void> | void;
-  exec: (vals: string[]) => Promise<any> | any;
+  functions: FunctionsYash;
+  variables: VariablesYash;
+  out: (...args: PrimitivesJS[]) => Promised<void>;
+  err: (...args: PrimitivesJS[]) => Promised<void>;
+  exec: (vals: string[]) => Promised<any>;
 }
 type Keywords = "";
 type NonOperators = PrimitivesParsed | Command;

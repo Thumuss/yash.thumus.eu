@@ -1,6 +1,6 @@
 {
   "name": "yash",
-  "module": "src/repl.ts",
+  "module": "src/import.ts",
   "type": "module",
   "devDependencies": {
     "bun-types": "latest"

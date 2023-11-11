@@ -34,6 +34,8 @@ if (Bun) {
   };
 
   const bridge: types.Bridge = {
+    functions: {},
+    variables: {},
     out,
     err: out,
     exec,

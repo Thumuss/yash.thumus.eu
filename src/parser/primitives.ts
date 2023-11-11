@@ -23,9 +23,12 @@ function bool (t: Token, p: Parser) {
 function argument(t: Token, p: Parser) {
     if (p.before()?.type == TypeToken.Function) {
         // Ajout à la class fonction qui nomme donc la fonction
-    } else if (p.nextToken()?.type == TypeToken.LeftPar) {
+    } else if (p.after()?.type == TypeToken.LeftPar) {
         // créer une fonction littéralement
-    } else 
+    } else if (p.before()?.type == TypeToken.Argument) {
+        p.consume();
+        (p.lastItem as Command).add(t as any);
+    } else
     literal(t, p, new Command(t));
 }
 

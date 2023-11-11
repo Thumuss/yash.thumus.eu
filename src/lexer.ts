@@ -14,6 +14,7 @@ enum TypeToken {
   // End of a statement
   Semicolon = ";", // TODO
   Comma = ",", // TODO
+  Backslash = "\\",
 
   // Pars
   LeftPar = "(",
@@ -122,7 +123,7 @@ function lexer(str: string): Token[] {
     "for",
     "in",
     "until",
-    "While",
+    "while",
     "do",
     "done",
     "case",
@@ -180,6 +181,13 @@ function lexer(str: string): Token[] {
           if (str[i] == "*" && i++) {
             obj = new Token(TypeToken.Pow);
           } else obj = new Token(TypeToken.Star);
+          break;
+        case "\\":
+          obj = new Token(TypeToken.Backslash);
+          break;
+        case "\n":
+          if (objects.at(-1)?.type != TypeToken.Backslash)
+            obj = new Token(TypeToken.Semicolon);
           break;
         case ">":
           if (str[i] == "=" && i++) obj = new Token(TypeToken.GrEq);

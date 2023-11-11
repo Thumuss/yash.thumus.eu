@@ -60,10 +60,16 @@ function plus(t: Token, p: Parser) {
 function minus(t: Token, p: Parser) {
   if (
     p.before()?.type != TypeToken.Number &&
-    p.nextToken().type == TypeToken.Number
+    p.after().type == TypeToken.Number
   ) {
     p.consume();
     (p.currentToken().value as number) *= -1;
+  } else if (
+    p.before()?.type == TypeToken.Argument &&
+    p.after()?.type == TypeToken.Argument
+  ) {
+    p.consume()
+    p.currentToken().value = "-" + p.currentToken().value
   } else {
     binary(t, p);
   }
@@ -99,7 +105,7 @@ function pipein(t: Token, p: Parser) {
 
 function semicolon(t: Token, p: Parser) {
   p.currentIdAst++;
-  p.next()
+  p.next();
 }
 
 export {
