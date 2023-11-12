@@ -46,11 +46,11 @@ enum TypeToken {
   PipeIn = "<|", // TODO: interface
 
   // Keywords of bash
-  If = "if",
-  Then = "then",
-  Elif = "elif",
-  Else = "else",
-  Fi = "fi",
+  If = "if", // fait
+  Then = "then", // Erreurs à faire
+  Elif = "elif", // fait
+  Else = "else", // fait
+  Fi = "fi", // Erreurs à faire
   Time = "time",
   For = "for",
   In = "in",
@@ -78,7 +78,7 @@ class Token {
   constructor(type: TypeToken, value?: PrimitivesJS) {
     this.plus = 0;
     this.type = type;
-    this.value = value || type;
+    this.value = typeof value === "undefined" ? type : value;
   }
 }
 
@@ -135,7 +135,7 @@ function lexer(str: string): Token[] {
 
   function matchKeyword(word: string) {
     const wl = word.length;
-    return i + wl - 2 < str.length && str.slice(i - 1, i + wl - 1) === word;
+    return (i + wl - 2 < str.length && str.slice(i - 1, i + wl - 1) === word) && (!/[a-zA-Z]/g.test(str[i + wl - 1]) || str[i + wl - 1] === undefined);
   }
 
   while (str.length > i) {
@@ -281,10 +281,10 @@ function lexer(str: string): Token[] {
           for (let keyw of keywords) {
             if (matchKeyword(keyw)) {
               let o = keyw === "true" || keyw === "false" ? "bool" : keyw;
-              obj = new Token(
-                (TypeToken as any)[o[0].toUpperCase() + o.slice(1)],
-                keyw === "true" || keyw === "false" ? keyw === "true" : keyw
-              );
+              const name = (TypeToken as any)[o[0].toUpperCase() + o.slice(1)];
+              const value =
+                keyw === "true" || keyw == "false" ? keyw === "true" : keyw;
+              obj = new Token(name, value);
               i += keyw.length - 1;
               matched = true;
               break;
@@ -307,7 +307,7 @@ function lexer(str: string): Token[] {
   if (isArgumentActif) objects.push(new Token(TypeToken.Argument, stacker));
   if (isNumberActif)
     objects.push(new Token(TypeToken.Number, parseInt(stacker)));
-  console.log(objects);
+  console.log(objects.map(a => a.type))
   return objects;
 }
 

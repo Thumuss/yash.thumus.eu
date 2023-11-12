@@ -1,5 +1,6 @@
 import type { TypeToken } from "./lexer";
 import type { Binary, Block, Command, PrimitivesParsed, Unary } from "./parser";
+import { Else, ElseIf, If } from "./parser/keywords";
 
 type FunctionsOperators = {
   [state in TypeToken]?: Function;
@@ -23,11 +24,11 @@ interface Bridge {
   err: (...args: PrimitivesJS[]) => Promised<void>;
   exec: (vals: string[]) => Promised<any>;
 }
-type Keywords = "";
+type Keywords = If | ElseIf | Else;
 type NonOperators = PrimitivesParsed | Command;
 type Operators = Binary | Unary;
-type AST = NonOperators | Operators | Block /*| Keywords*/;
+type AST = NonOperators | Operators | Block | Keywords;
 
 type PrimitivesJS = string | boolean | number | null;
 
-export type { FunctionsOperators, Bridge, PrimitivesJS, AST, NonOperators, Operators }
+export type { Keywords, FunctionsOperators, Bridge, PrimitivesJS, AST, NonOperators, Operators }

@@ -1,6 +1,7 @@
 import type { AST, PrimitivesJS, FunctionsOperators, Bridge } from "./types";
 import { TypeToken } from "./lexer";
 import { Binary, Command, PrimitivesParsed, Unary } from "./parser";
+import { Else, If } from "./parser/keywords";
 
 const operators: FunctionsOperators = {
   [TypeToken.Number]: () => null,
@@ -97,28 +98,71 @@ const operators: FunctionsOperators = {
   //[TypeToken.PipeIn]: undefined,
   //[TypeToken.Var]: undefined,
   //[TypeToken.Assignement]: undefined,
-  
+
   //[TypeToken.Semicolon]: undefined,
   //[TypeToken.LeftPar]: undefined,
   //[TypeToken.RightPar]: undefined,
 };
 
-async function evaluate(val: AST | undefined, bridge: Bridge): Promise<PrimitivesJS> {
-  if (val instanceof PrimitivesParsed) return val.value;
-  if (val instanceof Command) return  val.piped ? await bridge.exec(val.values) : await bridge.out(await bridge.exec(val.values));
+function und<T>(val: T) {
+  if (typeof val === "undefined") return null;
+  return val;
+}
+async function evaluate(
+  val: AST | undefined,
+  bridge: Bridge,
+): Promise<PrimitivesJS> {
+  if (val instanceof PrimitivesParsed) return und(val.value);
+  if (val instanceof Command)
+    return val.piped
+      ? und(await bridge.exec(val.values))
+      : und(await bridge.out(await bridge.exec(val.values)));
   if (val instanceof Unary) {
     if (operators[val.type]) {
-        return operators[val.type]?.(await evaluate(val.right, bridge)) || null;
+      return und(operators[val.type]?.(await evaluate(val.right, bridge)));
     }
   }
   if (val instanceof Binary) {
-    if (operators[val.type]) {
-        return operators[val.type]?.(await evaluate(val.left, bridge), await evaluate(val.right, bridge)) || null;
+    if (val.type === TypeToken.Eq) {
+      if (val.left?.type !== TypeToken.Var) throw "error eq"
+      bridge.variables[(val.left as any).value] = await evaluate(val.right, bridge);
+    }
+    else if (operators[val.type]) {
+      return und(
+        operators[val.type]?.(
+          await evaluate(val.left, bridge),
+          await evaluate(val.right, bridge)
+        )
+      );
     }
   }
+
+  if (val instanceof If) {
+    let vals: PrimitivesJS = null;
+    for (const condition of val.condition.parser.parsed) {
+      vals = await evaluate(condition, bridge);
+    }
+    if (typeof vals !== "boolean") throw "bad if condition";
+    if (vals) {
+      vals = null;
+      for (const returns of val.block.parser.parsed) {
+        vals = await evaluate(returns, bridge);
+      }
+      return und(vals);
+    } else if (val.continue && !vals) {
+      return und(await evaluate(val.continue, bridge));
+    }
+  }
+
+  if (val instanceof Else) {
+    let vals: PrimitivesJS = null;
+    for (const returns of val.block.parser.parsed) {
+      vals = await evaluate(returns, bridge);
+    }
+    return und(vals);
+  }
+
   return null;
 }
-
-
 
 export { evaluate };

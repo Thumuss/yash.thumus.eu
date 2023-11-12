@@ -1,6 +1,7 @@
 import { Token, TypeToken, lexer } from "./lexer";
-import { operators, primitives } from "./parser/exportParser";
-import { AST, NonOperators, PrimitivesJS } from "./types";
+import { keywords, operators, primitives } from "./parser/exportParser";
+import { Keyword } from "./parser/keywords";
+import { AST, Keywords, NonOperators, PrimitivesJS } from "./types";
 
 const orderPriority: TypeToken[] = [
   TypeToken.If,
@@ -51,7 +52,7 @@ const orderPriority: TypeToken[] = [
   TypeToken.LeftBracket,
   TypeToken.RightBracket,
 
-  TypeToken.Help
+  TypeToken.Help,
 ];
 class PrimitivesParsed {
   type: TypeToken;
@@ -158,24 +159,6 @@ class Unary {
   }
 }
 
-class Keyword {
-  type: TypeToken;
-
-  constructor(type: TypeToken) {
-    this.type = type;
-  }
-
-  static into(token: Token): Keyword {
-    return new Keyword(token.type);
-  }
-
-  toJSON(): any {
-    return {
-      type: this.type,
-    };
-  }
-}
-
 class Parser {
   tokens: Token[];
   currentIdToken: number = 0;
@@ -186,12 +169,20 @@ class Parser {
     this.tokens = tokens;
   }
 
+  count(
+    type: TypeToken,
+    start: number = this.currentIdToken,
+    end: number = this.tokens.length
+  ): number {
+    return this.tokens.slice(start, end).filter((a) => a.type === type).length;
+  }
+
   next(): void {
     this.currentIdToken++;
   }
 
-  end(): boolean {
-    return this.tokens.length == this.currentIdToken;
+  end(i: number = 0): boolean {
+    return this.tokens.length == this.currentIdToken + i;
   }
 
   currentToken(): Token {
@@ -221,14 +212,20 @@ class Parser {
       .slice(this.currentIdToken)
       .findIndex((a) => a.type == type);
   }
-  addObj(obj: NonOperators, parsed = this.parsed[this.currentIdAst]) {
-    if (parsed instanceof PrimitivesParsed || parsed instanceof Block)
-      throw "Error";
+  addObj(obj: NonOperators, parsed = this.currentAst) {
+    console.log(parsed, obj)
+    if (
+      parsed instanceof PrimitivesParsed ||
+      parsed instanceof Block ||
+      parsed instanceof Keyword
+    )
+      throw "Error AddObj";
     if (
       parsed instanceof Command &&
       (obj.type == TypeToken.Argument ||
         obj.type == TypeToken.Text ||
         obj.type == TypeToken.Bool ||
+        obj.type == TypeToken.Var ||
         obj.type == TypeToken.Number)
     )
       return parsed.add(obj);
@@ -239,16 +236,25 @@ class Parser {
     this.addObj(obj, parsed.right);
   }
 
+  get currentAst() {
+    return this.parsed[this.currentIdAst];
+  }
+
   addOpBin(obj: Binary) {
-    const parsed = this.parsed[this.currentIdAst];
-    if (parsed === undefined || parsed instanceof Block) throw "Error";
+    const parsed = this.currentAst;
+    if (
+      parsed === undefined ||
+      parsed instanceof Block ||
+      parsed instanceof Keyword
+    )
+      throw "Error Bin op";
     if (parsed instanceof PrimitivesParsed || parsed instanceof Command) {
       obj.left = parsed;
       this.parsed[this.currentIdAst] = obj;
     } else {
       if (obj.priority > parsed.priority) {
         obj.left = parsed.right;
-        (this.parsed[this.currentIdAst] as Binary).right = obj;
+        (this.currentAst as Binary).right = obj;
       } else {
         obj.left = parsed;
         this.parsed[this.currentIdAst] = obj;
@@ -257,27 +263,32 @@ class Parser {
   }
 
   addOpUna(obj: Unary) {
-    const parsed = this.parsed[this.currentIdAst];
-    if (
-      parsed instanceof PrimitivesParsed ||
-      parsed instanceof Command ||
-      parsed instanceof Block
-    )
-      throw "Error";
+    const parsed = this.currentAst;
+    if (!(parsed instanceof Binary) && parsed != undefined) throw "Error una";
     if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
     if (obj.priority > parsed.priority) {
       obj.right = parsed.right;
-      (this.parsed[this.currentIdAst] as Unary).right = obj;
+      (this.currentAst as Unary).right = obj;
     } else {
       obj.right = parsed;
       this.parsed[this.currentIdAst] = obj;
     }
   }
 
-  addBlock(obj: Block) {
-    if (!this.parsed !== undefined) this.currentIdAst++; // Les fonctions n'étant pas impl on va rester sur ça
+  addBlockKeywords(obj: Block | Keywords) {
+    this.changeIfNotEmpty();
     this.parsed[this.currentIdAst] = obj;
     this.currentIdAst++;
+  }
+
+  isEmpty(): boolean {
+    return this.currentAst === undefined;
+  }
+
+  changeIfNotEmpty() {
+    if (!this.isEmpty()) {
+      this.currentIdAst++;
+    }
   }
 
   add(obj: AST) {
@@ -289,8 +300,12 @@ class Parser {
     } else if (obj instanceof Unary) {
       this.addOpUna(obj);
     } else {
-      this.addBlock(obj);
+      this.addBlockKeywords(obj);
     }
+  }
+
+  toJSON(): any {
+    return this.parsed.map((a) => a.toJSON());
   }
 }
 
@@ -298,8 +313,8 @@ class Block {
   type: TypeToken;
   parser: Parser;
 
-  constructor(type: TypeToken, tokens: Token[]) {
-    this.type = type;
+  constructor(tokens: Token[]) {
+    this.type = TypeToken.LeftBracket;
     this.parser = parse(tokens);
   }
 
@@ -312,6 +327,7 @@ function parse(tokens: Token[]): Parser {
   const p = new Parser(tokens);
   //consumeParen(p);
   let i = 0;
+  let y = 0;
   while (!p.end()) {
     const t = p.currentToken();
     t.plus = i * 100;
@@ -340,6 +356,7 @@ function parse(tokens: Token[]): Parser {
         operators.greater(t, p);
         break;
       case TypeToken.LeftPar:
+        p.next();
         i++;
         break;
       case TypeToken.Less:
@@ -382,6 +399,7 @@ function parse(tokens: Token[]): Parser {
         operators.pow(t, p);
         break;
       case TypeToken.RightPar:
+        p.next();
         i--;
         break;
       case TypeToken.Semicolon:
@@ -396,25 +414,25 @@ function parse(tokens: Token[]): Parser {
       case TypeToken.Text:
         primitives.text(t, p);
         break;
-      case TypeToken.Var:
+      case TypeToken.If:
+        keywords.ifs(t, p);
         break;
-
+      case TypeToken.Elif:
+        keywords.elif(t, p);
+        break;
+      case TypeToken.Else:
+        keywords.elses(t, p);
+        break;
+      case TypeToken.Var:
+        primitives.vars(t, p);
+        break;
       default:
-        p.consume();
+        p.next();
         break;
     }
+    console.log(t)
   }
-  //console.log(p)
   return p;
 }
 
-export {
-  PrimitivesParsed,
-  Command,
-  Binary,
-  Unary,
-  Parser,
-  Keyword,
-  Block,
-  parse,
-};
+export { PrimitivesParsed, Command, Binary, Unary, Parser, Block, parse };

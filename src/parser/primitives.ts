@@ -4,8 +4,8 @@ import type { NonOperators } from "../types";
 
 function literal(t: Token, p: Parser, n?: NonOperators) {
     const obj = n || PrimitivesParsed.into(t);
+    p.consume()
     p.add(obj);
-    p.next();
 }
 
 function nums (t: Token, p: Parser) {
@@ -17,6 +17,11 @@ function text (t: Token, p: Parser) {
 }
 
 function bool (t: Token, p: Parser) {
+    literal(t, p)
+}
+
+
+function vars (t: Token, p: Parser) {
     literal(t, p)
 }
 
@@ -32,4 +37,4 @@ function argument(t: Token, p: Parser) {
     literal(t, p, new Command(t));
 }
 
-export { nums, text, bool, argument }
+export { nums, text, bool, argument, vars }

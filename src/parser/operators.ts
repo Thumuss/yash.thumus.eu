@@ -4,13 +4,13 @@ import { Binary, Parser, Unary } from "../parser";
 function binary(token: Token, p: Parser) {
   const obj = Binary.into(token);
   p.add(obj);
-  p.next();
+  p.consume();
 }
 
 function unary(token: Token, p: Parser) {
   const obj = Unary.into(token);
   p.add(obj);
-  p.next();
+  p.consume();
 }
 
 function and(t: Token, p: Parser) {
@@ -104,7 +104,7 @@ function pipein(t: Token, p: Parser) {
 }
 
 function semicolon(t: Token, p: Parser) {
-  p.currentIdAst++;
+  p.changeIfNotEmpty();
   p.next();
 }
 

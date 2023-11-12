@@ -19,10 +19,6 @@ async function run(str: string, inter: types.Bridge) {
   }
 }
 
-const promptMessage = "yash >> ";
-const helpMessage = "Welcome to the REPL of YASH\nType `?` to get help";
-
-
 if (Bun) {
   const out = (...args: types.PrimitivesJS[]): void => {
     let wri = args.map(String).join(" ");
@@ -43,11 +39,9 @@ if (Bun) {
     exec,
   };
 
-  console.log(helpMessage);
-  Bun.write(Bun.stdout, promptMessage);
-  for await (const entry of console) {
-    await run(entry, bridge);
-    Bun.write(Bun.stdout, promptMessage);
+  const args = process.argv.slice(2)
+  if (args[0]) {
+    await run(await Bun.file(args[0]).text(), bridge)
   }
 } else {
 }
