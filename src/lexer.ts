@@ -20,6 +20,8 @@ enum TypeToken {
   LeftPar = "(",
   RightPar = ")",
 
+  Comment = "#",
+
   // Logical
   And = "&&",
   Ampersand = "&",
@@ -62,9 +64,10 @@ enum TypeToken {
   Esac = "esac",
   Coproc = "coproc",
   Select = "select",
-  Function = "function",
-  LeftBracket = "{",
-  RightBracket = "}",
+  Function = "function", // fait
+  Local = "local", // PAS DU TOUT FAIT
+  LeftBracket = "{", // Fait ?
+  RightBracket = "}", // Fait ?
   DoubleLeftSqB = "[[",
   DoubleRightSqB = "]]",
 
@@ -90,6 +93,7 @@ function lexer(str: string): Token[] {
   let isNumberActif = false;
   let isArgumentActif = false;
   let isVar = false;
+  let isComment = false;
 
   let charText = "";
   let stacker = "";
@@ -111,6 +115,11 @@ function lexer(str: string): Token[] {
     stacker = "";
   }
 
+  function stopComment() {
+    isComment = false;
+    stacker = "";
+  }
+
   const keywords = [
     "true",
     "false",
@@ -122,6 +131,7 @@ function lexer(str: string): Token[] {
     "time",
     "for",
     "in",
+    "local",
     "until",
     "while",
     "do",
@@ -135,16 +145,21 @@ function lexer(str: string): Token[] {
 
   function matchKeyword(word: string) {
     const wl = word.length;
-    return (i + wl - 2 < str.length && str.slice(i - 1, i + wl - 1) === word) && (!/[a-zA-Z]/g.test(str[i + wl - 1]) || str[i + wl - 1] === undefined);
+    return (
+      i + wl - 2 < str.length &&
+      str.slice(i - 1, i + wl - 1) === word &&
+      (!/[a-zA-Z]/g.test(str[i + wl - 1]) || str[i + wl - 1] === undefined)
+    );
   }
 
   while (str.length > i) {
     let element = str[i++];
     let obj: Token | undefined = undefined;
     if (!/\d/g.test(element) && isNumberActif) stopNumber();
-    if (!/[a-zA-Z]/g.test(element) && isArgumentActif) stopArgs();
-    if (!/[a-zA-Z]/g.test(element) && isVar) stopVarName();
-    if (isTextActif && element != charText) {
+    if (!/[a-zA-Z0-9]/g.test(element) && isArgumentActif) stopArgs();
+    if (!/[a-zA-Z0-9]/g.test(element) && isVar) stopVarName();
+    if (/[\n;]/g.test(element) && isComment) stopComment(); // change
+    if ((isTextActif && element != charText) || isComment) {
       stacker += element;
     } else
       switch (element) {
@@ -177,6 +192,9 @@ function lexer(str: string): Token[] {
         case "/":
           obj = new Token(TypeToken.Slash);
           break;
+        case "#":
+          isComment = true;
+          break;
         case "*":
           if (str[i] == "*" && i++) {
             obj = new Token(TypeToken.Pow);
@@ -187,7 +205,7 @@ function lexer(str: string): Token[] {
           break;
         case "\n":
           if (objects.at(-1)?.type != TypeToken.Backslash)
-            obj = new Token(TypeToken.Semicolon);
+            obj = new Token(TypeToken.Semicolon); // change that
           break;
         case ">":
           if (str[i] == "=" && i++) obj = new Token(TypeToken.GrEq);
@@ -221,7 +239,6 @@ function lexer(str: string): Token[] {
           break;
         case "$":
           isVar = true;
-          stacker += element;
           break;
         case "[":
           if (str[i] == "[") {
@@ -272,7 +289,7 @@ function lexer(str: string): Token[] {
         case " ":
           if (!isArgumentActif) break;
         default:
-          if (/\d/.test(element)) {
+          if (/\d/.test(element) && !isVar && !isArgumentActif) {
             isNumberActif = true;
             stacker += element;
             break;
@@ -305,9 +322,11 @@ function lexer(str: string): Token[] {
   }
   if (isTextActif) objects.push(new Token(TypeToken.Text, stacker));
   if (isArgumentActif) objects.push(new Token(TypeToken.Argument, stacker));
+  if (isVar) objects.push(new Token(TypeToken.Var, stacker));
+
   if (isNumberActif)
     objects.push(new Token(TypeToken.Number, parseInt(stacker)));
-  console.log(objects.map(a => a.type))
+  //console.log(objects.map((a) => a.type));
   return objects;
 }
 

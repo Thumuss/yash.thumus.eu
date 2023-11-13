@@ -1,5 +1,5 @@
 import { evaluate, lexer, parse, types } from "./import";
-
+import { Bridge, VariablesYash } from "./types";
 async function run(str: string, inter: types.Bridge) {
   try {
     const lexed = lexer(str);
@@ -7,7 +7,7 @@ async function run(str: string, inter: types.Bridge) {
     for (const tree of parsed) {
       try {
         const evld = await evaluate(tree, inter);
-        if (evld) {
+        if (evld != undefined) {
           await inter.out(evld);
         }
       } catch (e: any) {
@@ -22,7 +22,6 @@ async function run(str: string, inter: types.Bridge) {
 const promptMessage = "yash >> ";
 const helpMessage = "Welcome to the REPL of YASH\nType `?` to get help";
 
-
 if (Bun) {
   const out = (...args: types.PrimitivesJS[]): void => {
     let wri = args.map(String).join(" ");
@@ -36,13 +35,17 @@ if (Bun) {
   };
 
   const bridge: types.Bridge = {
-    functions: {},
-    variables: {},
+    global_functions: {
+      test1: (_, vars: VariablesYash) => {
+        console.log(vars);
+      },
+    },
+    global_variables: {},
     out,
     err: out,
     exec,
   };
-
+  
   console.log(helpMessage);
   Bun.write(Bun.stdout, promptMessage);
   for await (const entry of console) {

@@ -1,8 +1,0 @@
-if (ls; file; true); then 
-    "bravo"
-elif (1 + 2 == 4); then
-    "Ouais"
-else
-then
-    "Nn"
-fi

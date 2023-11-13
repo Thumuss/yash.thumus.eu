@@ -1,0 +1,5 @@
+function test () {
+    echo $1 $2 $3 $4
+}
+
+test hey && test how are you ?

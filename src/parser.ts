@@ -95,6 +95,8 @@ class Command {
       this.values.push(token.value ? "true" : "false");
     } else if (token.type == TypeToken.Number) {
       this.values.push(token.value?.toString() as string);
+    } else if (token.type == TypeToken.Var) {
+      this.values.push("$" + token.value);
     }
   }
 
@@ -168,15 +170,6 @@ class Parser {
   constructor(tokens: Token[]) {
     this.tokens = tokens;
   }
-
-  count(
-    type: TypeToken,
-    start: number = this.currentIdToken,
-    end: number = this.tokens.length
-  ): number {
-    return this.tokens.slice(start, end).filter((a) => a.type === type).length;
-  }
-
   next(): void {
     this.currentIdToken++;
   }
@@ -187,10 +180,6 @@ class Parser {
 
   currentToken(): Token {
     return this.tokens[this.currentIdToken];
-  }
-
-  isToken(...args: TypeToken[]): boolean {
-    return args.includes(this.currentToken().type);
   }
 
   before(nb: number = 1): Token {
@@ -210,10 +199,9 @@ class Parser {
   findNext(type: TypeToken): number {
     return this.tokens
       .slice(this.currentIdToken)
-      .findIndex((a) => a.type == type);
+      .findIndex((a) => a.type == type) + this.currentIdToken;
   }
-  addObj(obj: NonOperators, parsed = this.currentAst) {
-    console.log(parsed, obj)
+  _obj(obj: NonOperators, parsed = this.currentAst) {
     if (
       parsed instanceof PrimitivesParsed ||
       parsed instanceof Block ||
@@ -225,22 +213,23 @@ class Parser {
       (obj.type == TypeToken.Argument ||
         obj.type == TypeToken.Text ||
         obj.type == TypeToken.Bool ||
-        obj.type == TypeToken.Var ||
-        obj.type == TypeToken.Number)
+        obj.type == TypeToken.Number ||
+        obj.type == TypeToken.Var)
     )
       return parsed.add(obj);
+    //console.log(parsed, obj);
     if (parsed instanceof Command) throw "Error";
     if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
     if (!(parsed instanceof Unary) && !parsed.left) return (parsed.left = obj);
     if (!parsed.right) return (parsed.right = obj);
-    this.addObj(obj, parsed.right);
+    this._obj(obj, parsed.right);
   }
 
   get currentAst() {
     return this.parsed[this.currentIdAst];
   }
 
-  addOpBin(obj: Binary) {
+  _binary(obj: Binary) {
     const parsed = this.currentAst;
     if (
       parsed === undefined ||
@@ -262,7 +251,7 @@ class Parser {
     }
   }
 
-  addOpUna(obj: Unary) {
+  _unary(obj: Unary) {
     const parsed = this.currentAst;
     if (!(parsed instanceof Binary) && parsed != undefined) throw "Error una";
     if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
@@ -275,18 +264,14 @@ class Parser {
     }
   }
 
-  addBlockKeywords(obj: Block | Keywords) {
+  _block_keywords(obj: Block | Keywords) {
     this.changeIfNotEmpty();
     this.parsed[this.currentIdAst] = obj;
     this.currentIdAst++;
   }
 
-  isEmpty(): boolean {
-    return this.currentAst === undefined;
-  }
-
   changeIfNotEmpty() {
-    if (!this.isEmpty()) {
+    if (this.currentAst !== undefined) {
       this.currentIdAst++;
     }
   }
@@ -294,13 +279,13 @@ class Parser {
   add(obj: AST) {
     this.lastItem = obj;
     if (obj instanceof PrimitivesParsed || obj instanceof Command) {
-      this.addObj(obj);
+      this._obj(obj);
     } else if (obj instanceof Binary) {
-      this.addOpBin(obj);
+      this._binary(obj);
     } else if (obj instanceof Unary) {
-      this.addOpUna(obj);
+      this._unary(obj);
     } else {
-      this.addBlockKeywords(obj);
+      this._block_keywords(obj);
     }
   }
 
@@ -315,6 +300,7 @@ class Block {
 
   constructor(tokens: Token[]) {
     this.type = TypeToken.LeftBracket;
+    //console.log(tokens.map((a) => a.type));
     this.parser = parse(tokens);
   }
 
@@ -325,9 +311,7 @@ class Block {
 
 function parse(tokens: Token[]): Parser {
   const p = new Parser(tokens);
-  //consumeParen(p);
   let i = 0;
-  let y = 0;
   while (!p.end()) {
     const t = p.currentToken();
     t.plus = i * 100;
@@ -339,15 +323,21 @@ function parse(tokens: Token[]): Parser {
         operators.and(t, p);
         break;
       case TypeToken.Argument:
-        primitives.argument(t, p);
+        if (!keywords.functions(t, p)) {
+          primitives.argument(t, p);
+        }
         break;
       case TypeToken.Assignement:
+        operators.assignement(t, p);
         break;
       case TypeToken.Bool:
         primitives.bool(t, p);
         break;
       case TypeToken.Eq:
         operators.equal(t, p);
+        break;
+      case TypeToken.Function:
+        keywords.functions(t, p);
         break;
       case TypeToken.GrEq:
         operators.greaterequal(t, p);
@@ -430,7 +420,6 @@ function parse(tokens: Token[]): Parser {
         p.next();
         break;
     }
-    console.log(t)
   }
   return p;
 }

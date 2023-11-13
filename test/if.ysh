@@ -1,0 +1,7 @@
+a = 12; # Change me!
+if (echo "Do you have the right answer?"; $a == 12); then 
+    "Yes you have!"
+else
+then
+    echo No "you don't" :c
+fi

@@ -1,0 +1,12 @@
+function game {
+    val = (random 1 10)
+    if ($1 == $val)
+    then
+        "Yes you did it!"
+    else
+    then
+        "Awww try again! The correct number was " + str $val
+    fi
+}
+echo "Guess the number!"
+game $3

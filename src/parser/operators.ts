@@ -4,13 +4,13 @@ import { Binary, Parser, Unary } from "../parser";
 function binary(token: Token, p: Parser) {
   const obj = Binary.into(token);
   p.add(obj);
-  p.consume();
+  p.next();
 }
 
 function unary(token: Token, p: Parser) {
   const obj = Unary.into(token);
   p.add(obj);
-  p.consume();
+  p.next();
 }
 
 function and(t: Token, p: Parser) {
@@ -19,6 +19,10 @@ function and(t: Token, p: Parser) {
 
 function ampersand(t: Token, p: Parser) {
   unary(t, p);
+}
+
+function assignement(t: Token, p: Parser) {
+  binary(t, p);
 }
 
 function or(t: Token, p: Parser) {
@@ -68,8 +72,8 @@ function minus(t: Token, p: Parser) {
     p.before()?.type == TypeToken.Argument &&
     p.after()?.type == TypeToken.Argument
   ) {
-    p.consume()
-    p.currentToken().value = "-" + p.currentToken().value
+    p.consume();
+    p.currentToken().value = "-" + p.currentToken().value;
   } else {
     binary(t, p);
   }
@@ -111,6 +115,7 @@ function semicolon(t: Token, p: Parser) {
 export {
   and,
   ampersand,
+  assignement,
   or,
   not,
   equal,

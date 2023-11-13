@@ -25,24 +25,21 @@ class If extends Keyword {
   block: Block;
   condition: Block;
   continue?: AST;
-  constructor(p: Parser) {
-    super(TypeToken.If);
+  constructor(p: Parser, type = TypeToken.If) {
+    super(type);
     this.p = p;
 
     if (p.after()?.type !== TypeToken.LeftPar) {
       throw "if error leftPar";
     }
     const bFirst = p.findNext(TypeToken.Then);
-
     let l = 0;
     let cLast;
     do {
-      cLast = bFirst - 1 - l;
+      cLast = bFirst - l;
       l++;
-    } while (p.tokens[cLast].type == TypeToken.Semicolon);
-
+    } while (p.tokens[cLast]?.type != TypeToken.RightPar);
     this.condition = new Block(p.tokens.slice(p.currentIdToken + 1, cLast + 1));
-
     let i = 1;
     while (i != 0 && !p.end(1)) {
       p.next();
@@ -62,12 +59,6 @@ class If extends Keyword {
 
     if (bFirst === -1) throw this.type + " error";
     this.block = new Block(p.tokens.slice(bFirst + 1, p.currentIdToken));
-
-    const s = p.currentIdToken;
-    p.currentIdToken = 0;
-    for (let i = 0; i < s; i++) {
-      p.consume();
-    }
   }
 
   toJSON(): any {
@@ -82,8 +73,7 @@ class If extends Keyword {
 
 class ElseIf extends If {
   constructor(p: Parser) {
-    super(p);
-    this.type = TypeToken.Elif;
+    super(p, TypeToken.Elif);
   }
 }
 
@@ -111,16 +101,10 @@ class Else extends Keyword {
         i++;
       }
     }
-    
+
     if (i > 0) throw "else not closed";
     if (bFirst === -1) throw "else error";
     this.block = new Block(p.tokens.slice(bFirst, p.currentIdToken));
-
-    const s = p.currentIdToken;
-    p.currentIdToken = 0;
-    for (let i = 0; i < s; i++) {
-      p.consume();
-    }
   }
 
   toJSON(): any {
@@ -158,4 +142,50 @@ function elses(t: Token, p: Parser) {
   }
 }
 
-export { ifs, If, ElseIf, Else, Keyword, elif, elses };
+class Functions extends Keyword {
+  name?: string;
+  p: Parser;
+  block: Block;
+
+  constructor(p: Parser, name?: string) {
+    super(TypeToken.Function);
+    this.name = name;
+    this.p = p;
+    let i = 1;
+    const l = p.findNext(TypeToken.LeftBracket);
+    p.currentIdToken = l;
+    while (i != 0 && !p.end(1)) {
+      p.next();
+      const tk = p.currentToken();
+      //console.log(tk.type)
+      if (tk.type === TypeToken.RightBracket) {
+        i--;
+      } else if (tk.type === TypeToken.LeftBracket) {
+        i++;
+      }
+    }
+    if (l < 0) throw "function not started";
+    if (i > 0) throw "function not closed";
+    this.block = new Block(p.tokens.slice(l + 1, p.currentIdToken));
+  }
+}
+
+function functions(t: Token, p: Parser) {
+  if (t.type === TypeToken.Argument) {
+    if (p.after()?.type === TypeToken.LeftPar) {
+      const fnc = new Functions(p, t.value as string);
+      p.add(fnc);
+      p.next();
+      return true;
+    } else {
+      return false;
+    }
+  }
+  const name = p.after()?.value;
+  const fnc = new Functions(p, name as string);
+  p.add(fnc);
+  p.next();
+  return true;
+}
+
+export { ifs, If, ElseIf, Else, Keyword, elif, elses, Functions, functions };

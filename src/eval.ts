@@ -1,7 +1,15 @@
-import type { AST, PrimitivesJS, FunctionsOperators, Bridge } from "./types";
+import type {
+  AST,
+  PrimitivesJS,
+  FunctionsOperators,
+  Bridge,
+  Promised,
+  VariablesYash,
+  FunctionsYash,
+} from "./types";
 import { TypeToken } from "./lexer";
 import { Binary, Command, PrimitivesParsed, Unary } from "./parser";
-import { Else, If } from "./parser/keywords";
+import { Else, Functions, If } from "./parser/keywords";
 
 const operators: FunctionsOperators = {
   [TypeToken.Number]: () => null,
@@ -73,10 +81,10 @@ const operators: FunctionsOperators = {
   },
 
   [TypeToken.Eq]: (a: PrimitivesJS, b: PrimitivesJS) => {
-    return a === b;
+    return a == b;
   },
   [TypeToken.NotEq]: (a: PrimitivesJS, b: PrimitivesJS) => {
-    return a !== b;
+    return a != b;
   },
   [TypeToken.Less]: (a: PrimitivesJS, b: PrimitivesJS) => {
     if (typeof a === "number" && typeof b === "number") return a < b;
@@ -94,72 +102,168 @@ const operators: FunctionsOperators = {
     if (typeof a === "number" && typeof b === "number") return a <= b;
     throw "I got nothing in my braiiin <=";
   },
-  //[TypeToken.PipeOut]: undefined,
-  //[TypeToken.PipeIn]: undefined,
-  //[TypeToken.Var]: undefined,
-  //[TypeToken.Assignement]: undefined,
-
-  //[TypeToken.Semicolon]: undefined,
-  //[TypeToken.LeftPar]: undefined,
-  //[TypeToken.RightPar]: undefined,
 };
 
-function und<T>(val: T) {
+const global_functions: FunctionsYash = {
+  random: (_, vars: VariablesYash) => {
+    const v2 = parseInt(String(vars["2"]));
+    const v1 = parseInt(String(vars["1"]));
+    return !Number.isNaN(v2)
+      ? Math.floor(
+          (Math.random() * (!Number.isNaN(v2) ? v2 : v1)) +
+            (!Number.isNaN(v1) ? v1 : 0)
+        )
+      : Math.random();
+  },
+  nbr: (_, vars: VariablesYash) => {
+    return parseInt(String(vars["1"]));
+  },
+
+  str : (_, vars: VariablesYash) => {
+    return String(vars["1"]);
+  },
+};
+
+const global_variables: VariablesYash = Object.fromEntries(
+  process.argv.map((a, i) => [String(i), a])
+);
+
+function undefined_to_null<T>(val: T) {
   if (typeof val === "undefined") return null;
   return val;
 }
 async function evaluate(
-  val: AST | undefined,
+  objet: AST | undefined,
   bridge: Bridge,
+  scoped_variables = { ...global_variables, ...bridge.global_variables }
 ): Promise<PrimitivesJS> {
-  if (val instanceof PrimitivesParsed) return und(val.value);
-  if (val instanceof Command)
-    return val.piped
-      ? und(await bridge.exec(val.values))
-      : und(await bridge.out(await bridge.exec(val.values)));
-  if (val instanceof Unary) {
-    if (operators[val.type]) {
-      return und(operators[val.type]?.(await evaluate(val.right, bridge)));
+  const glob_funcs = { ...global_functions, ...bridge.global_functions };
+  if (objet instanceof PrimitivesParsed) {
+    if (objet.type === TypeToken.Var) {
+      const local = scoped_variables[objet.value as any];
+      if (local === undefined) {
+        return undefined_to_null(bridge.global_variables[objet.value as any]);
+      }
+      return local;
+    } else {
+      return undefined_to_null(objet.value);
     }
   }
-  if (val instanceof Binary) {
-    if (val.type === TypeToken.Eq) {
-      if (val.left?.type !== TypeToken.Var) throw "error eq"
-      bridge.variables[(val.left as any).value] = await evaluate(val.right, bridge);
+  if (objet instanceof Command) {
+    const func = glob_funcs?.[objet.values?.[0]];
+    if (func !== undefined) {
+      const variables: VariablesYash = { ...scoped_variables };
+      const values = objet.values
+        .map((a) => {
+          if (a.startsWith("$")) {
+            const glob = global_variables[a.slice(1)];
+            const local = scoped_variables[a.slice(1)];
+            return local === undefined
+              ? glob === undefined
+                ? ""
+                : glob
+              : local;
+          }
+          return a;
+        })
+        .map(String);
+      for (const id in values) {
+        variables[id] = values[id];
+      }
+      return (await func(bridge, variables)) as Promised<PrimitivesJS>;
+    } else {
+      const func = await bridge.exec(
+        objet.values
+          .map((a) => {
+            if (a.startsWith("$")) {
+              const glob = bridge.global_variables[a.slice(1)];
+              const local = scoped_variables[a.slice(1)];
+              return local === undefined
+                ? glob === undefined
+                  ? ""
+                  : glob
+                : local;
+            }
+            return a;
+          })
+          .map(String)
+      );
+
+      return objet.piped
+        ? undefined_to_null(func)
+        : undefined_to_null(await bridge.out(func));
     }
-    else if (operators[val.type]) {
-      return und(
-        operators[val.type]?.(
-          await evaluate(val.left, bridge),
-          await evaluate(val.right, bridge)
+  }
+  if (objet instanceof Unary) {
+    if (operators[objet.type]) {
+      return undefined_to_null(
+        operators[objet.type]?.(
+          await evaluate(objet.right, bridge, scoped_variables)
+        )
+      );
+    }
+  }
+  if (objet instanceof Binary) {
+    if (objet.type === TypeToken.Assignement) {
+      if (
+        objet.left?.type !== TypeToken.Var &&
+        objet.left?.type !== TypeToken.Argument
+      )
+        throw "error eq";
+      const value = await evaluate(objet.right, bridge, scoped_variables);
+      const o = objet.left;
+      scoped_variables[
+        (o instanceof PrimitivesParsed
+          ? o.value
+          : (o as Command).values.join("_")) as any
+      ] = value;
+      return null;
+    } else if (operators[objet.type]) {
+      return undefined_to_null(
+        operators[objet.type]?.(
+          await evaluate(objet.left, bridge, scoped_variables),
+          await evaluate(objet.right, bridge, scoped_variables)
         )
       );
     }
   }
 
-  if (val instanceof If) {
+  if (objet instanceof If) {
     let vals: PrimitivesJS = null;
-    for (const condition of val.condition.parser.parsed) {
-      vals = await evaluate(condition, bridge);
+    for (const condition of objet.condition.parser.parsed) {
+      vals = await evaluate(condition, bridge, scoped_variables);
     }
     if (typeof vals !== "boolean") throw "bad if condition";
     if (vals) {
       vals = null;
-      for (const returns of val.block.parser.parsed) {
-        vals = await evaluate(returns, bridge);
+      for (const returns of objet.block.parser.parsed) {
+        vals = await evaluate(returns, bridge, scoped_variables);
       }
-      return und(vals);
-    } else if (val.continue && !vals) {
-      return und(await evaluate(val.continue, bridge));
+      return undefined_to_null(vals);
+    } else if (objet.continue && !vals) {
+      return undefined_to_null(
+        await evaluate(objet.continue, bridge, scoped_variables)
+      );
     }
   }
 
-  if (val instanceof Else) {
+  if (objet instanceof Else) {
     let vals: PrimitivesJS = null;
-    for (const returns of val.block.parser.parsed) {
-      vals = await evaluate(returns, bridge);
+    for (const returns of objet.block.parser.parsed) {
+      vals = await evaluate(returns, bridge, scoped_variables);
     }
-    return und(vals);
+    return undefined_to_null(vals);
+  }
+
+  if (objet instanceof Functions) {
+    global_functions[objet.name as string] = async (bridge, vars) => {
+      let vals = null;
+      for (const parsed of objet.block.parser.parsed) {
+        vals = await evaluate(parsed, bridge, vars); // vars
+      }
+      return vals;
+    };
+    return null;
   }
 
   return null;
