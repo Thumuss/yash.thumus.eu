@@ -1,7 +1,7 @@
 import { Token, TypeToken, lexer } from "./lexer";
 import { keywords, operators, primitives } from "./parser/exportParser";
 import { Keyword } from "./parser/keywords";
-import { AST, Keywords, NonOperators, PrimitivesJS } from "./types";
+import { AST, Keywords, NonOperators, PrimitivesJS, TermFunc } from "../types";
 
 const orderPriority: TypeToken[] = [
   TypeToken.If,
@@ -113,11 +113,12 @@ class Binary {
   left?: AST;
   right?: AST;
   priority: number;
-  constructor(type: TypeToken, priority: number, right?: AST, left?: AST) {
-    this.type = type;
+  constructor(token: Token, right?: AST, left?: AST) {
+    this.type = token.type;
     this.right = right;
     this.left = left;
-    this.priority = priority;
+    this.priority =
+      token.plus + orderPriority.findIndex((a) => a == token.type);
   }
 
   toJSON(): any {
@@ -127,30 +128,17 @@ class Binary {
       right: this.right?.toJSON(),
     };
   }
-
-  static into(token: Token): Binary {
-    return new Binary(
-      token.type,
-      token.plus + orderPriority.findIndex((a) => a == token.type)
-    );
-  }
 }
 
 class Unary {
   type: TypeToken;
   right?: AST;
   priority: number;
-  constructor(type: TypeToken, priority: number, right?: AST, left?: AST) {
-    this.type = type;
+  constructor(token: Token, right?: AST) {
+    this.type = token.type;
     this.right = right;
-    this.priority = priority;
-  }
-
-  static into(token: Token): Unary {
-    return new Unary(
-      token.type,
-      token.plus + orderPriority.findIndex((a) => a == token.type)
-    );
+    this.priority =
+      token.plus + orderPriority.findIndex((a) => a == token.type);
   }
 
   toJSON(): any {
@@ -161,46 +149,120 @@ class Unary {
   }
 }
 
-class Parser {
+abstract class Reader {
   tokens: Token[];
-  currentIdToken: number = 0;
-  parsed: AST[] = [];
-  currentIdAst: number = 0;
-  lastItem?: AST;
+  id: number = 0;
+
   constructor(tokens: Token[]) {
     this.tokens = tokens;
   }
+
   next(): void {
-    this.currentIdToken++;
+    this.id++;
   }
 
   end(i: number = 0): boolean {
-    return this.tokens.length == this.currentIdToken + i;
+    return this.tokens.length == this.id + i;
   }
 
-  currentToken(): Token {
-    return this.tokens[this.currentIdToken];
+  token(): Token {
+    return this.tokens[this.id];
   }
 
   before(nb: number = 1): Token {
-    return this.tokens[this.currentIdToken - nb];
+    return this.tokens[this.id - nb];
   }
 
   after(nb: number = 1): Token {
-    return this.tokens[this.currentIdToken + nb];
+    return this.tokens[this.id + nb];
+  }
+
+  typeTokens(tokens = this.tokens) {
+    return tokens.map((a) => a.type);
+  }
+
+  valTokens(tokens = this.tokens) {
+    return tokens.map((a) => a.value);
   }
 
   consume() {
     this.tokens = this.tokens
-      .slice(0, this.currentIdToken)
-      .concat(this.tokens.slice(this.currentIdToken + 1));
+      .slice(0, this.id)
+      .concat(this.tokens.slice(this.id + 1));
   }
 
   findNext(type: TypeToken): number {
-    return this.tokens
-      .slice(this.currentIdToken)
-      .findIndex((a) => a.type == type) + this.currentIdToken;
+    return (
+      this.tokens.slice(this.id).findIndex((a) => a.type == type) + this.id
+    );
   }
+
+  afterEqlTyp(type: TypeToken, nb = 0) {
+    return this.after(nb)?.type === type
+  }
+
+  beforeEqlTyp(type: TypeToken, nb = 0) {
+    return this.before(nb)?.type === type
+  }
+
+  termination(plus: TermFunc[], minus: TermFunc[]) {
+    let i = 1;
+    while (i != 0 && !this.end(1)) {
+      this.next();
+      const t = this.token();
+      for (const onePlus of plus) {
+        if (onePlus(t, i)) i++;
+      }
+      for (const oneMinus of minus) {
+        if (oneMinus(t, i)) i--;
+      }
+    }
+    return i == 0;
+  }
+
+  lastTokenBefore(type: TypeToken, nb: number = this.tokens.length - 1) {
+    let i = 0;
+    let last;
+    do {
+      last = nb - i;
+      i++;
+    } while (this.tokens[last]?.type != type);
+    return last;
+  }
+}
+
+class Parser extends Reader {
+  ASTs: AST[] = [];
+  idAST: number = 0;
+  lItem?: AST;
+
+  constructor(tokens: Token[]) {
+    super(tokens);
+  }
+
+  get currentAst() {
+    return this.ASTs[this.idAST];
+  }
+
+  changeIfNotEmpty() {
+    if (this.currentAst !== undefined) {
+      this.idAST++;
+    }
+  }
+
+  add(obj: AST) {
+    this.lItem = obj;
+    if (obj instanceof PrimitivesParsed || obj instanceof Command) {
+      this._obj(obj);
+    } else if (obj instanceof Binary) {
+      this._binary(obj);
+    } else if (obj instanceof Unary) {
+      this._unary(obj);
+    } else {
+      this._block_keywords(obj);
+    }
+  }
+
   _obj(obj: NonOperators, parsed = this.currentAst) {
     if (
       parsed instanceof PrimitivesParsed ||
@@ -217,16 +279,11 @@ class Parser {
         obj.type == TypeToken.Var)
     )
       return parsed.add(obj);
-    //console.log(parsed, obj);
     if (parsed instanceof Command) throw "Error";
-    if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
+    if (parsed === undefined) return (this.ASTs[this.idAST] = obj);
     if (!(parsed instanceof Unary) && !parsed.left) return (parsed.left = obj);
     if (!parsed.right) return (parsed.right = obj);
     this._obj(obj, parsed.right);
-  }
-
-  get currentAst() {
-    return this.parsed[this.currentIdAst];
   }
 
   _binary(obj: Binary) {
@@ -239,14 +296,14 @@ class Parser {
       throw "Error Bin op";
     if (parsed instanceof PrimitivesParsed || parsed instanceof Command) {
       obj.left = parsed;
-      this.parsed[this.currentIdAst] = obj;
+      this.ASTs[this.idAST] = obj;
     } else {
       if (obj.priority > parsed.priority) {
         obj.left = parsed.right;
         (this.currentAst as Binary).right = obj;
       } else {
         obj.left = parsed;
-        this.parsed[this.currentIdAst] = obj;
+        this.ASTs[this.idAST] = obj;
       }
     }
   }
@@ -254,43 +311,24 @@ class Parser {
   _unary(obj: Unary) {
     const parsed = this.currentAst;
     if (!(parsed instanceof Binary) && parsed != undefined) throw "Error una";
-    if (parsed === undefined) return (this.parsed[this.currentIdAst] = obj);
+    if (parsed === undefined) return (this.ASTs[this.idAST] = obj);
     if (obj.priority > parsed.priority) {
       obj.right = parsed.right;
       (this.currentAst as Unary).right = obj;
     } else {
       obj.right = parsed;
-      this.parsed[this.currentIdAst] = obj;
+      this.ASTs[this.idAST] = obj;
     }
   }
 
   _block_keywords(obj: Block | Keywords) {
     this.changeIfNotEmpty();
-    this.parsed[this.currentIdAst] = obj;
-    this.currentIdAst++;
-  }
-
-  changeIfNotEmpty() {
-    if (this.currentAst !== undefined) {
-      this.currentIdAst++;
-    }
-  }
-
-  add(obj: AST) {
-    this.lastItem = obj;
-    if (obj instanceof PrimitivesParsed || obj instanceof Command) {
-      this._obj(obj);
-    } else if (obj instanceof Binary) {
-      this._binary(obj);
-    } else if (obj instanceof Unary) {
-      this._unary(obj);
-    } else {
-      this._block_keywords(obj);
-    }
+    this.ASTs[this.idAST] = obj;
+    this.idAST++;
   }
 
   toJSON(): any {
-    return this.parsed.map((a) => a.toJSON());
+    return this.ASTs.map((a) => a.toJSON());
   }
 }
 
@@ -305,7 +343,7 @@ class Block {
   }
 
   toJSON(): any {
-    return this.parser.parsed.map((a) => a.toJSON());
+    return this.parser.ASTs.map((a) => a.toJSON());
   }
 }
 
@@ -313,7 +351,7 @@ function parse(tokens: Token[]): Parser {
   const p = new Parser(tokens);
   let i = 0;
   while (!p.end()) {
-    const t = p.currentToken();
+    const t = p.token();
     t.plus = i * 100;
     switch (t.type) {
       case TypeToken.Ampersand:

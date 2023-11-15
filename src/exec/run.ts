@@ -1,23 +1,4 @@
-import { evaluate, lexer, parse, types } from "./import";
-
-async function run(str: string, inter: types.Bridge) {
-  try {
-    const lexed = lexer(str);
-    const parsed = parse(lexed).parsed;
-    for (const tree of parsed) {
-      try {
-        const evld = await evaluate(tree, inter);
-        if (evld) {
-          await inter.out(evld);
-        }
-      } catch (e: any) {
-        await inter.err(e);
-      }
-    }
-  } catch (e: any) {
-    await inter.err(e);
-  }
-}
+import { run, types } from "../runner";
 
 if (Bun) {
   const out = (...args: types.PrimitivesJS[]): void => {

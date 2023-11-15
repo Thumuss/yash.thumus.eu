@@ -1,4 +1,4 @@
-import { PrimitivesJS } from "./types";
+import { PrimitivesJS } from "../types";
 
 enum TypeToken {
   // Primitives
@@ -28,6 +28,7 @@ enum TypeToken {
   Or = "||",
   Not = "!",
   Eq = "==",
+  ApproxEq = "=~",
   NotEq = "!=",
   GrEq = ">=",
   LsEq = "<=",
@@ -62,7 +63,6 @@ enum TypeToken {
   Done = "done",
   Case = "case",
   Esac = "esac",
-  Coproc = "coproc",
   Select = "select",
   Function = "function", // fait
   Local = "local", // PAS DU TOUT FAIT
@@ -73,6 +73,8 @@ enum TypeToken {
 
   Help = "?",
 }
+
+// Faire read & coproc
 
 class Token {
   type: TypeToken;

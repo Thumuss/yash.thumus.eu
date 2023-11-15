@@ -1,10 +1,12 @@
-import type { TypeToken } from "./lexer";
-import type { Binary, Block, Command, PrimitivesParsed, Unary } from "./parser";
-import type { Else, ElseIf, Functions, If } from "./parser/keywords";
+import type { Token, TypeToken } from "./interpretor/lexer";
+import type { Binary, Block, Command, PrimitivesParsed, Unary } from "./interpretor/parser";
+import type { Else, ElseIf, Functions, If } from "./interpretor/parser/keywords";
 
 type FunctionsOperators = {
   [state in TypeToken]?: Function;
 };
+
+type TermFunc = ((token: Token, i: number) => boolean)
 
 type ReturnYash =
   | Promised<PrimitivesJS>
@@ -45,4 +47,5 @@ export type {
   Promised,
   VariablesYash,
   FunctionsYash,
+  TermFunc,
 };

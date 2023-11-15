@@ -1,6 +1,6 @@
 import { TypeToken, type Token } from "../lexer";
 import { Command, Parser, PrimitivesParsed } from "../parser";
-import type { NonOperators } from "../types";
+import type { NonOperators } from "../../types";
 
 function literal(t: Token, p: Parser, n?: NonOperators) {
   const obj = n || PrimitivesParsed.into(t);
@@ -25,10 +25,10 @@ function vars(t: Token, p: Parser) {
 }
 
 function argument(t: Token, p: Parser) {
-  if (p.lastItem?.type === TypeToken.Argument && p.before()?.type != TypeToken.Semicolon) {
+  if (p.lItem?.type === TypeToken.Argument && p.before()?.type != TypeToken.Semicolon) {
     //console.log("b", t.value);
     p.next();
-    (p.lastItem as Command).add(t as any);
+    (p.lItem as Command).add(t as any);
   } else {
     //console.log("a", t.value);
     literal(t, p, new Command(t));

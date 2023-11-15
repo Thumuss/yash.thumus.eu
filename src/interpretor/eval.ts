@@ -6,7 +6,7 @@ import type {
   Promised,
   VariablesYash,
   FunctionsYash,
-} from "./types";
+} from "../types";
 import { TypeToken } from "./lexer";
 import { Binary, Command, PrimitivesParsed, Unary } from "./parser";
 import { Else, Functions, If } from "./parser/keywords";
@@ -230,13 +230,13 @@ async function evaluate(
 
   if (objet instanceof If) {
     let vals: PrimitivesJS = null;
-    for (const condition of objet.condition.parser.parsed) {
+    for (const condition of objet.condition.parser.ASTs) {
       vals = await evaluate(condition, bridge, scoped_variables);
     }
     if (typeof vals !== "boolean") throw "bad if condition";
     if (vals) {
       vals = null;
-      for (const returns of objet.block.parser.parsed) {
+      for (const returns of objet.block.parser.ASTs) {
         vals = await evaluate(returns, bridge, scoped_variables);
       }
       return undefined_to_null(vals);
@@ -249,7 +249,7 @@ async function evaluate(
 
   if (objet instanceof Else) {
     let vals: PrimitivesJS = null;
-    for (const returns of objet.block.parser.parsed) {
+    for (const returns of objet.block.parser.ASTs) {
       vals = await evaluate(returns, bridge, scoped_variables);
     }
     return undefined_to_null(vals);
@@ -258,7 +258,7 @@ async function evaluate(
   if (objet instanceof Functions) {
     global_functions[objet.name as string] = async (bridge, vars) => {
       let vals = null;
-      for (const parsed of objet.block.parser.parsed) {
+      for (const parsed of objet.block.parser.ASTs) {
         vals = await evaluate(parsed, bridge, vars); // vars
       }
       return vals;

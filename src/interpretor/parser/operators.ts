@@ -2,13 +2,13 @@ import { Token, TypeToken } from "../lexer";
 import { Binary, Parser, Unary } from "../parser";
 
 function binary(token: Token, p: Parser) {
-  const obj = Binary.into(token);
+  const obj = new Binary (token);
   p.add(obj);
   p.next();
 }
 
 function unary(token: Token, p: Parser) {
-  const obj = Unary.into(token);
+  const obj = new Unary(token);
   p.add(obj);
   p.next();
 }
@@ -67,13 +67,13 @@ function minus(t: Token, p: Parser) {
     p.after().type == TypeToken.Number
   ) {
     p.consume();
-    (p.currentToken().value as number) *= -1;
+    (p.token().value as number) *= -1;
   } else if (
     p.before()?.type == TypeToken.Argument &&
     p.after()?.type == TypeToken.Argument
   ) {
     p.consume();
-    p.currentToken().value = "-" + p.currentToken().value;
+    p.token().value = "-" + p.token().value;
   } else {
     binary(t, p);
   }
