@@ -126,9 +126,16 @@ You can open an issue at my [repository](https://github.com/ThumusLive/yash.thum
 Things I need to do:
 
 - [ ] Separate topics: Numbers need to be with Equations, Args with args etc...
-    - [ ] Statement: Everything is a statement but it's not a normal
-    - [ ] Equations: Numbers
+    - [ ] Statement: Everything is a statement but it's not normal
+    - [ ] Equations: Numbers, Floats
+    - [ ] Logical: Logical operators with booleans
+    - [x] Args: Contains command and args for the command
+    - [ ] Flow: Preprocess (|>, <|), link external tools?
+    - [ ] Bits: Operators with bits (&, |, )
 - [ ] Strict mode: The goal is to run normal bash and yash. Useful with equations
 - [ ] Impl basic helper functions: We need functions to use it in C for example.
 - [ ] Yash to Bash: A converter tool can be useful. 
 - [ ] Errors: Line, column with a little graphic and a stack trace.
+- [ ] Add keywords: Some keywords aren't already implemented.
+- [ ] Reorganise: Everything is in the name
+- [ ] DOCS: obv
