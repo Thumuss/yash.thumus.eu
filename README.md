@@ -55,8 +55,6 @@ WORK IN PROGRESS
 
 > The langage will change that's for sure.
 
-In a EBNF form with a +:
-
 White spaces are ommited
 
 ## YASH version
@@ -122,3 +120,15 @@ wip
 # Contributing & Bugs
 
 You can open an issue at my [repository](https://github.com/ThumusLive/yash.thumus.eu/issues), I don't accept PR (normally).
+
+# TODO
+
+Things I need to do:
+
+- [ ] Separate topics: Numbers need to be with Equations, Args with args etc...
+    - [ ] Statement: Everything is a statement but it's not a normal
+    - [ ] Equations: Numbers
+- [ ] Strict mode: The goal is to run normal bash and yash. Useful with equations
+- [ ] Impl basic helper functions: We need functions to use it in C for example.
+- [ ] Yash to Bash: A converter tool can be useful. 
+- [ ] Errors: Line, column with a little graphic and a stack trace.

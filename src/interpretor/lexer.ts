@@ -8,11 +8,12 @@ enum TypeToken {
   Argument = "Args",
 
   // Vars
-  Var = "Var", // TODO
-  Assignement = "=", // TODO
+  Var = "Var",
+  Assignement = "=",
 
   // End of a statement
-  Semicolon = ";", // TODO
+  Semicolon = ";",
+  NewLine = "\\n",
   Comma = ",", // TODO
   Backslash = "\\",
 
@@ -74,12 +75,18 @@ enum TypeToken {
   Help = "?",
 }
 
-// Faire read & coproc
+interface Position {
+  lineStart: number;
+  lineEnd?: number;
+  columnStart: number;
+  columnEnd?: number;
+}
 
 class Token {
   type: TypeToken;
   value: PrimitivesJS;
   plus: number;
+  position!: Position;
   constructor(type: TypeToken, value?: PrimitivesJS) {
     this.plus = 0;
     this.type = type;
@@ -153,14 +160,15 @@ function lexer(str: string): Token[] {
       (!/[a-zA-Z]/g.test(str[i + wl - 1]) || str[i + wl - 1] === undefined)
     );
   }
-
+  let nbLine = 1;
+  let nbCols = 1;
   while (str.length > i) {
     let element = str[i++];
     let obj: Token | undefined = undefined;
     if (!/\d/g.test(element) && isNumberActif) stopNumber();
     if (!/[a-zA-Z0-9]/g.test(element) && isArgumentActif) stopArgs();
     if (!/[a-zA-Z0-9]/g.test(element) && isVar) stopVarName();
-    if (/[\n;]/g.test(element) && isComment) stopComment(); // change
+    if (/[\n]/g.test(element) && isComment) stopComment(); // change
     if ((isTextActif && element != charText) || isComment) {
       stacker += element;
     } else
@@ -206,8 +214,9 @@ function lexer(str: string): Token[] {
           obj = new Token(TypeToken.Backslash);
           break;
         case "\n":
-          if (objects.at(-1)?.type != TypeToken.Backslash)
-            obj = new Token(TypeToken.Semicolon); // change that
+          obj = new Token(TypeToken.NewLine);
+          nbLine++;
+          nbCols = 0;
           break;
         case ">":
           if (str[i] == "=" && i++) obj = new Token(TypeToken.GrEq);
@@ -320,7 +329,16 @@ function lexer(str: string): Token[] {
 
           break;
       }
-    if (obj) objects.push(obj);
+    if (obj) {
+      obj.position = {
+        lineStart: nbLine,
+        lineEnd: nbLine + 1,
+        columnStart: nbCols,
+        columnEnd: nbCols + String(obj.value).length
+      }
+      objects.push(obj);
+    }
+    nbCols++;
   }
   if (isTextActif) objects.push(new Token(TypeToken.Text, stacker));
   if (isArgumentActif) objects.push(new Token(TypeToken.Argument, stacker));

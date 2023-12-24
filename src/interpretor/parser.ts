@@ -18,7 +18,6 @@ const orderPriority: TypeToken[] = [
   TypeToken.Done,
   TypeToken.Case,
   TypeToken.Esac,
-  TypeToken.Coproc,
   TypeToken.Select,
   TypeToken.Function,
 
@@ -367,6 +366,9 @@ function parse(tokens: Token[]): Parser {
         break;
       case TypeToken.Assignement:
         operators.assignement(t, p);
+        break;
+      case TypeToken.NewLine:
+        operators.newline(t, p);
         break;
       case TypeToken.Bool:
         primitives.bool(t, p);

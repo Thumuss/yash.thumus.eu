@@ -13,12 +13,12 @@ async function run(str: string, inter: types.Bridge) {
           if (evld != undefined) {
             await inter.out(evld);
           }
-        } catch (e: any) {
-          await inter.err(e);
+        } catch (e) {
+          await inter.err(e as any);
         }
       }
-    } catch (e: any) {
-      await inter.err(e);
+    } catch (e) {
+      await inter.err(e as any);
     }
   }
 

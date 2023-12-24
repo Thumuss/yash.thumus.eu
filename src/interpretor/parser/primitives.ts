@@ -25,12 +25,10 @@ function vars(t: Token, p: Parser) {
 }
 
 function argument(t: Token, p: Parser) {
-  if (p.lItem?.type === TypeToken.Argument && p.before()?.type != TypeToken.Semicolon) {
-    //console.log("b", t.value);
+  if (p.lItem?.type === TypeToken.Argument && p.before()?.type != TypeToken.Semicolon && p.before()?.type != TypeToken.NewLine) {
     p.next();
     (p.lItem as Command).add(t as any);
   } else {
-    //console.log("a", t.value);
     literal(t, p, new Command(t));
   }
 }

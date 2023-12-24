@@ -64,7 +64,7 @@ function plus(t: Token, p: Parser) {
 function minus(t: Token, p: Parser) {
   if (
     p.before()?.type != TypeToken.Number &&
-    p.after().type == TypeToken.Number
+    p.after()?.type == TypeToken.Number
   ) {
     p.consume();
     (p.token().value as number) *= -1;
@@ -112,6 +112,11 @@ function semicolon(t: Token, p: Parser) {
   p.next();
 }
 
+function newline(t: Token, p: Parser) {
+  p.after()?.type != TypeToken.Backslash && p.changeIfNotEmpty();
+  p.next();
+}
+
 export {
   and,
   ampersand,
@@ -119,6 +124,7 @@ export {
   or,
   not,
   equal,
+  newline,
   notequal,
   greaterequal,
   lessequal,

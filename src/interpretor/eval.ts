@@ -7,6 +7,7 @@ import type {
   VariablesYash,
   FunctionsYash,
 } from "../types";
+import { ErrorYASH } from "./error";
 import { TypeToken } from "./lexer";
 import { Binary, Command, PrimitivesParsed, Unary } from "./parser";
 import { Else, Functions, If } from "./parser/keywords";
@@ -26,7 +27,7 @@ const operators: FunctionsOperators = {
 
   [TypeToken.Not]: function (a: PrimitivesJS) {
     if (typeof a !== "boolean") {
-      throw "I got nothing in my braiiin !";
+      throw new Error(); //new ErrorYASH();
     }
     return !a;
   },
