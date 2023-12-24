@@ -139,3 +139,4 @@ Things I need to do:
 - [ ] Add keywords: Some keywords aren't already implemented.
 - [ ] Reorganise: Everything is in the name
 - [ ] DOCS: obv
+- [ ] Add structs: Arrays, Dicts, Tuples, ...
