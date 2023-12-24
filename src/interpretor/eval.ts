@@ -111,7 +111,7 @@ const global_functions: FunctionsYash = {
     const v1 = parseInt(String(vars["1"]));
     return !Number.isNaN(v2)
       ? Math.floor(
-          (Math.random() * (!Number.isNaN(v2) ? v2 : v1)) +
+          Math.random() * (!Number.isNaN(v2) ? v2 : v1) +
             (!Number.isNaN(v1) ? v1 : 0)
         )
       : Math.random();
@@ -120,14 +120,34 @@ const global_functions: FunctionsYash = {
     return parseInt(String(vars["1"]));
   },
 
-  str : (_, vars: VariablesYash) => {
+  max: (_, vars: VariablesYash) => {
+    const v2 = parseInt(String(vars["2"]));
+    const v1 = parseInt(String(vars["1"]));
+    return Math.max(v1 || 0, v2 || v1 || 0);
+  },
+
+  min: (_, vars: VariablesYash) => {
+    const v2 = parseInt(String(vars["2"]));
+    const v1 = parseInt(String(vars["1"]));
+    return Math.min(v1 || 0, v2 || v1 || 0);
+  },
+
+  pow: (_, vars: VariablesYash) => {
+    const v2 = parseInt(String(vars["2"]));
+    const v1 = parseInt(String(vars["1"]));
+    return Number.isNaN(v2)
+      ? Math.pow(v1, 2)
+      : Math.pow(v1, v2);
+  },
+
+  str: (_, vars: VariablesYash) => {
     return String(vars["1"]);
   },
 };
 
-const global_variables: VariablesYash = Object.fromEntries(
-  process.argv.map((a, i) => [String(i), a])
-);
+const global_variables: VariablesYash = {
+  ...Object.fromEntries(process.argv.map((a, i) => [String(i), a])),
+};
 
 function undefined_to_null<T>(val: T) {
   if (typeof val === "undefined") return null;

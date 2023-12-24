@@ -28,8 +28,9 @@ if (Bun) {
   
   console.log(helpMessage);
   Bun.write(Bun.stdout, promptMessage);
-  for await (const entry of console) {
-    await run(entry, bridge);
+  for await (const entry of Bun.stdin.stream()) {
+    const chunkText = Buffer.from(entry).toString();
+    await run(chunkText, bridge);
     Bun.write(Bun.stdout, promptMessage);
   }
 } else {
