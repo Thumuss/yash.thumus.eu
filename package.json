@@ -2,10 +2,13 @@
   "name": "yash",
   "module": "src/import.ts",
   "type": "module",
+  "scripts": {
+    "build": "bun build ./src/runner.ts --outdir ./build --minify"
+  },
   "devDependencies": {
     "bun-types": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "latest"
   }
 }
