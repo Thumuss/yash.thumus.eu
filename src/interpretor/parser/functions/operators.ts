@@ -1,5 +1,7 @@
-import { Token, TypeToken } from "../lexer";
-import { Binary, Parser, Unary } from "../parser";
+import { Token, TypeToken } from "../../lexer";
+import Binary from "../classes/Binary";
+import Parser from "../classes/Parser";
+import Unary from "../classes/Unary";
 
 function binary(token: Token, p: Parser) {
   const obj = new Binary (token);

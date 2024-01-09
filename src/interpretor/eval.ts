@@ -9,8 +9,11 @@ import type {
 } from "../types";
 import { ErrorYASH } from "./error";
 import { TypeToken } from "./lexer";
-import { Binary, Command, PrimitivesParsed, Unary } from "./parser";
-import { Else, Functions, If } from "./parser/keywords";
+import Binary from "./parser/classes/Binary";
+import Command from "./parser/classes/Command";
+import Primitive from "./parser/classes/Primitives";
+import Unary from "./parser/classes/Unary";
+import { Else, Functions, If } from "./parser/functions/keywords";
 
 const operators: FunctionsOperators = {
   [TypeToken.Number]: () => null,
@@ -159,7 +162,7 @@ async function evaluate(
   scoped_variables = { ...global_variables, ...bridge.global_variables }
 ): Promise<PrimitivesJS> {
   const glob_funcs = { ...global_functions, ...bridge.global_functions };
-  if (objet instanceof PrimitivesParsed) {
+  if (objet instanceof Primitive) {
     if (objet.type === TypeToken.Var) {
       const local = scoped_variables[objet.value as any];
       if (local === undefined) {
@@ -234,7 +237,7 @@ async function evaluate(
       const value = await evaluate(objet.right, bridge, scoped_variables);
       const o = objet.left;
       scoped_variables[
-        (o instanceof PrimitivesParsed
+        (o instanceof Primitive
           ? o.value
           : (o as Command).values.join("_")) as any
       ] = value;

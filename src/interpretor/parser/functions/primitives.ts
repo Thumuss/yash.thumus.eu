@@ -1,9 +1,11 @@
-import { TypeToken, type Token } from "../lexer";
-import { Command, Parser, PrimitivesParsed } from "../parser";
-import type { NonOperators } from "../../types";
+import { TypeToken, type Token } from "../../lexer";
+import type { NonOperators } from "../../../types";
+import Parser from "../classes/Parser";
+import Primitive from "../classes/Primitives";
+import Command from "../classes/Command";
 
 function literal(t: Token, p: Parser, n?: NonOperators) {
-  const obj = n || PrimitivesParsed.into(t);
+  const obj = n || Primitive.into(t);
   p.next();
   p.add(obj);
 }

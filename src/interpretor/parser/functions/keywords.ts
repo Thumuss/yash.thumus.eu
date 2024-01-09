@@ -1,6 +1,7 @@
-import { Token, TypeToken } from "../lexer";
-import { Block, Parser } from "../parser";
-import { AST } from "../../types";
+import { Token, TypeToken } from "../../lexer";
+import { AST } from "../../../types";
+import Parser from "../classes/Parser";
+import Block from "../classes/Block";
 
 const elseElif = (t: Token, i: number) =>
   (t.type === TypeToken.Elif || t.type === TypeToken.Else) && i == 1;

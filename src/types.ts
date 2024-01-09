@@ -1,6 +1,10 @@
 import type { Token, TypeToken } from "./interpretor/lexer";
-import type { Binary, Block, Command, PrimitivesParsed, Unary } from "./interpretor/parser";
-import type { Else, ElseIf, Functions, If } from "./interpretor/parser/keywords";
+import Binary from "./interpretor/parser/classes/Binary";
+import Block from "./interpretor/parser/classes/Block";
+import Command from "./interpretor/parser/classes/Command";
+import Primitive from "./interpretor/parser/classes/Primitives";
+import Unary from "./interpretor/parser/classes/Unary";
+import type { Else, ElseIf, Functions, If } from "./interpretor/parser/functions/keywords";
 
 type FunctionsOperators = {
   [state in TypeToken]?: Function;
@@ -30,7 +34,7 @@ interface Bridge {
   exec: (vals: string[]) => Promised<any>;
 }
 type Keywords = If | ElseIf | Else | Functions;
-type NonOperators = PrimitivesParsed | Command;
+type NonOperators = Primitive | Command;
 type Operators = Binary | Unary;
 type AST = NonOperators | Operators | Block | Keywords;
 
