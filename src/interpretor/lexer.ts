@@ -305,6 +305,11 @@ function lexer(str: string): Token[] {
             stacker += element;
             break;
           }
+          if(isArgumentActif) {
+            stacker += element;
+            break;
+          }
+          
           let matched = false;
           for (let keyw of keywords) {
             if (matchKeyword(keyw)) {
