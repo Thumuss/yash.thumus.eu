@@ -119,7 +119,7 @@ wip
 
 # Contributing & Bugs
 
-You can open an issue at my [repository](https://github.com/ThumusLive/yash.thumus.eu/issues), I don't accept PR (normally).
+You can open an issue at my [repository](https://github.com/Thumuss/yash.thumus.eu/issues), I don't accept PR (normally).
 
 # TODO
 
