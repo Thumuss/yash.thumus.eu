@@ -283,7 +283,7 @@ function lexer(str: string): Token[] {
             }
             break;
           }
-        case "'":
+        case "`":
           if (str[i - 2] != "\\" && (!isTextActif || charText == "`")) {
             isTextActif = !isTextActif;
             if (isTextActif) {
@@ -305,11 +305,11 @@ function lexer(str: string): Token[] {
             stacker += element;
             break;
           }
-          if(isArgumentActif) {
+          if (isArgumentActif) {
             stacker += element;
             break;
           }
-          
+
           let matched = false;
           for (let keyw of keywords) {
             if (matchKeyword(keyw)) {
@@ -339,19 +339,29 @@ function lexer(str: string): Token[] {
         lineStart: nbLine,
         lineEnd: nbLine + 1,
         columnStart: nbCols,
-        columnEnd: nbCols + String(obj.value).length
-      }
+        columnEnd: nbCols + String(obj.value).length,
+      };
       objects.push(obj);
     }
     nbCols++;
   }
+
   if (isTextActif) objects.push(new Token(TypeToken.Text, stacker));
   if (isArgumentActif) objects.push(new Token(TypeToken.Argument, stacker));
   if (isVar) objects.push(new Token(TypeToken.Var, stacker));
 
   if (isNumberActif)
     objects.push(new Token(TypeToken.Number, parseInt(stacker)));
-  //console.log(objects.map((a) => a.type));
+  if (isArgumentActif || isTextActif || isVar || isNumberActif) {
+    const obj = objects.at(-1);
+    if (obj)
+      obj.position = {
+        lineStart: nbLine,
+        lineEnd: nbLine + 1,
+        columnStart: nbCols,
+        columnEnd: nbCols + String(obj.value).length,
+      };
+  }
   return objects;
 }
 

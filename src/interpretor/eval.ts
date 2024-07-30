@@ -8,7 +8,7 @@ import type {
   FunctionsYash,
 } from "../types";
 import { ErrorYASH } from "./error";
-import { TypeToken } from "./lexer";
+import { Token, TypeToken } from "./lexer";
 import Binary from "./parser/classes/Binary";
 import Command from "./parser/classes/Command";
 import Primitive from "./parser/classes/Primitives";
@@ -92,7 +92,7 @@ const operators: FunctionsOperators = {
   },
   [TypeToken.Less]: (a: PrimitivesJS, b: PrimitivesJS) => {
     if (typeof a === "number" && typeof b === "number") return a < b;
-    throw "I got nothing in my braiiin <";
+    throw "EVAL ERROR: You can't mix use < with ${}";
   },
   [TypeToken.Greater]: (a: PrimitivesJS, b: PrimitivesJS) => {
     if (typeof a === "number" && typeof b === "number") return a > b;
@@ -138,13 +138,26 @@ const global_functions: FunctionsYash = {
   pow: (_, vars: VariablesYash) => {
     const v2 = parseInt(String(vars["2"]));
     const v1 = parseInt(String(vars["1"]));
-    return Number.isNaN(v2)
-      ? Math.pow(v1, 2)
-      : Math.pow(v1, v2);
+    return Number.isNaN(v2) ? Math.pow(v1, 2) : Math.pow(v1, v2);
   },
 
-  str: (_, vars: VariablesYash) => {
+  str: (_, vars: VariablesYash): string => {
     return String(vars["1"]);
+  },
+
+  type: (_, vars: VariablesYash): string => {
+    return Object.entries(vars)
+      .slice(1)
+      .map((a) => `${a[0]}: ${typeof a[1]}`)
+      .join(", ");
+  },
+
+  tokens: (_, __, ___, tokens: Token[]): string => {
+    return tokens.map(a => a.type.toString()).join(", ");
+  },
+
+  ast: (_, __, ast: AST): string => {
+    return JSON.stringify(ast.toJSON());
   },
 };
 
@@ -156,134 +169,194 @@ function undefined_to_null<T>(val: T) {
   if (typeof val === "undefined") return null;
   return val;
 }
-async function evaluate(
-  objet: AST | undefined,
-  bridge: Bridge,
-  scoped_variables = { ...global_variables, ...bridge.global_variables }
-): Promise<PrimitivesJS> {
-  const glob_funcs = { ...global_functions, ...bridge.global_functions };
-  if (objet instanceof Primitive) {
-    if (objet.type === TypeToken.Var) {
-      const local = scoped_variables[objet.value as any];
-      if (local === undefined) {
-        return undefined_to_null(bridge.global_variables[objet.value as any]);
-      }
-      return local;
-    } else {
-      return undefined_to_null(objet.value);
-    }
-  }
-  if (objet instanceof Command) {
-    const func = glob_funcs?.[objet.values?.[0]];
-    if (func !== undefined) {
-      const variables: VariablesYash = { ...scoped_variables };
-      const values = objet.values
-        .map((a) => {
-          if (a.startsWith("$")) {
-            const glob = global_variables[a.slice(1)];
-            const local = scoped_variables[a.slice(1)];
-            return local === undefined
-              ? glob === undefined
-                ? ""
-                : glob
-              : local;
-          }
-          return a;
-        })
-        .map(String);
-      for (const id in values) {
-        variables[id] = values[id];
-      }
-      return (await func(bridge, variables)) as Promised<PrimitivesJS>;
-    } else {
-      const func = await bridge.exec(
-        objet.values
-          .map((a) => {
-            if (a.startsWith("$")) {
-              const glob = bridge.global_variables[a.slice(1)];
-              const local = scoped_variables[a.slice(1)];
-              return local === undefined
-                ? glob === undefined
-                  ? ""
-                  : glob
-                : local;
-            }
-            return a;
-          })
-          .map(String)
-      );
 
-      return objet.piped
-        ? undefined_to_null(func)
-        : undefined_to_null(await bridge.out(func));
+interface EvalParams<T = AST | undefined> {
+  ast: T;
+  bridge: Bridge;
+  scoped_variables?: VariablesYash;
+  tokens: Token[];
+}
+
+async function evalPrimitive({
+  ast,
+  bridge,
+  scoped_variables = { ...global_variables, ...bridge.global_variables },
+}: EvalParams<Primitive>) {
+  if (ast.type === TypeToken.Var) {
+    const local = scoped_variables[ast.value as any];
+    if (local === undefined) {
+      return undefined_to_null(bridge.global_variables[ast.value as any]);
     }
+    return local;
+  } else {
+    return undefined_to_null(ast.value);
   }
-  if (objet instanceof Unary) {
-    if (operators[objet.type]) {
+}
+
+async function evalCommand({
+  ast,
+  bridge,
+  scoped_variables = { ...global_variables, ...bridge.global_variables },
+}: EvalParams<Command>) {
+  const func = await bridge.exec(
+    ast.values.map((a) => {
+      if (typeof a === "string" && a.startsWith("$")) {
+        const glob = bridge.global_variables[a.slice(1)];
+        const local = scoped_variables[a.slice(1)];
+        return local === undefined ? (glob === undefined ? "" : glob) : local;
+      }
+      return a;
+    })
+  );
+
+  return ast.piped
+    ? undefined_to_null(func)
+    : undefined_to_null(await bridge.out(func));
+}
+
+async function evalFunctionYASH({
+  ast,
+  bridge,
+  scoped_variables = { ...global_variables, ...bridge.global_variables },
+  tokens,
+}: EvalParams<Command>) {
+  const variables: VariablesYash = { ...scoped_variables };
+  const values = ast.values.map((a) => {
+    if (typeof a === "string" && a.startsWith("$")) {
+      const glob = global_variables[a.slice(1)];
+      const local = scoped_variables[a.slice(1)];
+      return local === undefined ? (glob === undefined ? "" : glob) : local;
+    }
+    return a;
+  });
+  for (const id in values) {
+    variables[id] = values[id];
+  }
+
+  const glob_funcs = { ...global_functions, ...bridge.global_functions };
+  const func = glob_funcs?.[ast.values?.[0]?.toString() || ""];
+  return (await func(bridge, variables, ast, tokens)) as Promised<PrimitivesJS>;
+}
+
+async function evalFunction({
+  ast,
+  bridge,
+  scoped_variables = { ...global_variables, ...bridge.global_variables },
+  tokens,
+}: EvalParams<Command>) {
+  const glob_funcs = { ...global_functions, ...bridge.global_functions };
+  const func = ast.values[0] ? glob_funcs[ast.values[0].toString()] : undefined
+  if (func) {
+    return evalFunctionYASH({ ast, bridge, tokens, scoped_variables });
+  } else {
+    return evalCommand({ ast, bridge, tokens, scoped_variables });
+  }
+}
+
+async function evaluate({
+  ast,
+  bridge,
+  scoped_variables = { ...global_variables, ...bridge.global_variables },
+  tokens,
+}: EvalParams): Promise<PrimitivesJS> {
+  if (ast instanceof Primitive) {
+    return evalPrimitive({ ast, bridge, scoped_variables, tokens });
+  }
+
+  if (ast instanceof Command) {
+    return evalFunction({ ast, bridge, scoped_variables, tokens });
+  }
+  if (ast instanceof Unary) {
+    if (operators[ast.type]) {
       return undefined_to_null(
-        operators[objet.type]?.(
-          await evaluate(objet.right, bridge, scoped_variables)
+        operators[ast.type]?.(
+          await evaluate({ ast: ast.right, bridge, scoped_variables, tokens })
         )
       );
     }
   }
-  if (objet instanceof Binary) {
-    if (objet.type === TypeToken.Assignement) {
+  if (ast instanceof Binary) {
+    if (ast.type === TypeToken.Assignement) {
       if (
-        objet.left?.type !== TypeToken.Var &&
-        objet.left?.type !== TypeToken.Argument
+        ast.left?.type !== TypeToken.Var &&
+        ast.left?.type !== TypeToken.Argument
       )
         throw "error eq";
-      const value = await evaluate(objet.right, bridge, scoped_variables);
-      const o = objet.left;
+      const value = await evaluate({
+        ast: ast.right,
+        bridge,
+        scoped_variables,
+        tokens,
+      });
+      const o = ast.left;
       scoped_variables[
         (o instanceof Primitive
           ? o.value
           : (o as Command).values.join("_")) as any
       ] = value;
       return null;
-    } else if (operators[objet.type]) {
+    } else if (operators[ast.type]) {
       return undefined_to_null(
-        operators[objet.type]?.(
-          await evaluate(objet.left, bridge, scoped_variables),
-          await evaluate(objet.right, bridge, scoped_variables)
+        operators[ast.type]?.(
+          await evaluate({ ast: ast.left, bridge, scoped_variables, tokens }),
+          await evaluate({ ast: ast.right, bridge, scoped_variables, tokens })
         )
       );
     }
   }
 
-  if (objet instanceof If) {
+  if (ast instanceof If) {
     let vals: PrimitivesJS = null;
-    for (const condition of objet.condition.parser.ASTs) {
-      vals = await evaluate(condition, bridge, scoped_variables);
+    for (const condition of ast.condition.parser.ASTs) {
+      vals = await evaluate({
+        ast: condition,
+        bridge,
+        scoped_variables,
+        tokens,
+      });
     }
     if (typeof vals !== "boolean") throw "bad if condition";
     if (vals) {
       vals = null;
-      for (const returns of objet.block.parser.ASTs) {
-        vals = await evaluate(returns, bridge, scoped_variables);
+      for (const returns of ast.block.parser.ASTs) {
+        vals = await evaluate({
+          ast: returns,
+          bridge,
+          scoped_variables,
+          tokens,
+        });
       }
       return undefined_to_null(vals);
-    } else if (objet.continue && !vals) {
+    } else if (ast.continue && !vals) {
       return undefined_to_null(
-        await evaluate(objet.continue, bridge, scoped_variables)
+        await evaluate({
+          ast: ast.continue,
+          bridge,
+          scoped_variables,
+          tokens,
+        })
       );
     }
   }
 
-  if (objet instanceof Else) {
+  if (ast instanceof Else) {
     let vals: PrimitivesJS = null;
-    for (const returns of objet.block.parser.ASTs) {
-      vals = await evaluate(returns, bridge, scoped_variables);
+    for (const returns of ast.block.parser.ASTs) {
+      vals = await evaluate({ ast: returns, bridge, scoped_variables, tokens });
     }
     return undefined_to_null(vals);
   }
 
-  if (objet instanceof Functions) {
-    global_functions[objet.name as string] = async (bridge, vars) => {
+  if (ast instanceof Functions) {
+    global_functions[ast.name as string] = async (bridge, vars) => {
       let vals = null;
-      for (const parsed of objet.block.parser.ASTs) {
-        vals = await evaluate(parsed, bridge, vars); // vars
+      for (const parsed of ast.block.parser.ASTs) {
+        vals = await evaluate({
+          ast: parsed,
+          bridge,
+          scoped_variables: vars,
+          tokens,
+        }); // vars
       }
       return vals;
     };

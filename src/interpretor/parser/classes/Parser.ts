@@ -12,9 +12,11 @@ class Parser extends Reader {
   ASTs: AST[] = [];
   idAST: number = 0;
   lItem?: AST;
+  copy: Token[];
 
   constructor(tokens: Token[]) {
     super(tokens);
+    this.copy = [...tokens]
   }
 
   get currentAst() {

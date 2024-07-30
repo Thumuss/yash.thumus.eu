@@ -7,6 +7,7 @@ import {
 import Parser from "./parser/classes/Parser";
 
 const orderPriority: TypeToken[] = [
+  TypeToken.Argument,
   TypeToken.If,
   TypeToken.Then,
   TypeToken.Elif,
@@ -172,6 +173,7 @@ function parse(tokens: Token[]): Parser {
         break;
     }
   }
+  console.log(p.ASTs[0].toJSON())
   return p;
 }
 

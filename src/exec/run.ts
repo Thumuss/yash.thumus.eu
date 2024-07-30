@@ -7,8 +7,8 @@ if (Bun) {
     Bun.write(Bun.stdout, wri);
   };
 
-  const exec = async (vals: string[]) => {
-    const proc = Bun.spawn(vals);
+  const exec = async (vals: types.PrimitivesJS[]) => {
+    const proc = Bun.spawn(vals.map(String));
     return await new Response(proc.stdout).text();
   };
 

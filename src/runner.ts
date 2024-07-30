@@ -6,10 +6,10 @@ import * as types from "./types";
 async function run(str: string, inter: types.Bridge) {
     try {
       const lexed = lexer(str);
-      const ASTs = parse(lexed).ASTs;
+      const { ASTs, copy: copyTokens } = parse(lexed);
       for (const tree of ASTs) {
         try {
-          const evld = await evaluate(tree, inter);
+          const evld = await evaluate({ ast: tree, bridge: inter, tokens: copyTokens });
           if (evld != undefined) {
             await inter.out(evld);
           }

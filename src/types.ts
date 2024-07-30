@@ -19,7 +19,7 @@ type ReturnYash =
 type Promised<T> = Promise<T> | T;
 
 interface FunctionsYash {
-  [name: string]: (bridge: Bridge, variables: VariablesYash) => ReturnYash;
+  [name: string]: (bridge: Bridge, variables: VariablesYash, ast: AST, tokens: Token[]) => ReturnYash;
 }
 
 interface VariablesYash {
@@ -31,8 +31,9 @@ interface Bridge {
   global_variables: VariablesYash;
   out: (...args: PrimitivesJS[]) => Promised<void>;
   err: (...args: PrimitivesJS[]) => Promised<void>;
-  exec: (vals: string[]) => Promised<any>;
+  exec: (vals: PrimitivesJS[]) => Promised<any>;
 }
+
 type Keywords = If | ElseIf | Else | Functions;
 type NonOperators = Primitive | Command;
 type Operators = Binary | Unary;
