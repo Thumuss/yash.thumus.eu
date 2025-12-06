@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YASH - Yet Another SHell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐚</text></svg>">
+    <!-- Pyodide for Python support -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">🐚</span>
+                    <span class="logo-text">YASH</span>
+                </div>
+                <span class="version">v1.0.0</span>
+            </div>
+            <nav class="nav">
+                <a href="#terminal" class="nav-link active">Terminal</a>
+                <a href="#docs" class="nav-link">Documentation</a>
+                <a href="https://github.com/Thumuss/yash" target="_blank" class="nav-link">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    GitHub
+                </a>
+            </nav>
+            <div class="header-right">
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Hero Section -->
+            <section class="hero" id="hero">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="gradient-text">Yet Another SHell</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        A portable Bash interpreter written in TypeScript, 
+                        running entirely in your browser.
+                    </p>
+                    <div class="hero-features">
+                        <div class="feature">
+                            <span class="feature-icon">⚡</span>
+                            <span>100+ Commands</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">🌐</span>
+                            <span>Works Offline</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">🔒</span>
+                            <span>Sandboxed</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">📦</span>
+                            <span>Virtual FS</span>
+                        </div>
+                    </div>
+                    <button class="cta-button" onclick="scrollToTerminal()">
+                        Try it now
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <div class="hero-visual">
+                    <div class="floating-terminal">
+                        <div class="mini-terminal-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <div class="mini-terminal-content">
+                            <div class="line"><span class="prompt">$</span> echo "Hello, World!"</div>
+                            <div class="line output">Hello, World!</div>
+                            <div class="line"><span class="prompt">$</span> ls -la</div>
+                            <div class="line output">drwxr-xr-x  user  Documents/</div>
+                            <div class="line output">-rw-r--r--  user  README.md</div>
+                            <div class="line"><span class="prompt">$</span> <span class="cursor">█</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Terminal Section -->
+            <section class="terminal-section" id="terminal">
+                <div class="terminal-container">
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="terminal-buttons">
+                                <button class="terminal-btn close" title="Close"></button>
+                                <button class="terminal-btn minimize" title="Minimize"></button>
+                                <button class="terminal-btn maximize" title="Maximize"></button>
+                            </div>
+                            <div class="terminal-title">
+                                <span class="terminal-icon">🐚</span>
+                                <span id="terminalPath">/home/user</span>
+                            </div>
+                            <div class="terminal-actions">
+                                <button class="action-btn" id="clearBtn" title="Clear terminal">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                                    </svg>
+                                </button>
+                                <button class="action-btn" id="downloadBtn" title="Download session">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"></path>
+                                    </svg>
+                                </button>
+                                <button class="action-btn" id="fullscreenBtn" title="Fullscreen">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="terminal-body" id="terminalBody">
+                            <div class="terminal-output" id="terminalOutput">
+                                <div class="welcome-message">
+                                    <pre class="ascii-art">
+██╗   ██╗ █████╗ ███████╗██╗  ██╗
+╚██╗ ██╔╝██╔══██╗██╔════╝██║  ██║
+ ╚████╔╝ ███████║███████╗███████║
+  ╚██╔╝  ██╔══██║╚════██║██╔══██║
+   ██║   ██║  ██║███████║██║  ██║
+   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+                                    </pre>
+                                    <p>Welcome to <strong>YASH</strong> - Yet Another SHell v1.0.0</p>
+                                    <p class="hint">Type <code>help</code> for available commands, or try <code>ls</code>, <code>cat</code>, <code>ps</code>...</p>
+                                </div>
+                            </div>
+                            <div class="terminal-input-line">
+                                <span class="prompt-text" id="promptText">user@yash:/home/user $</span>
+                                <input type="text" class="terminal-input" id="terminalInput" autocomplete="off" spellcheck="false" autofocus>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <aside class="sidebar">
+                        <div class="sidebar-section">
+                            <h3 class="sidebar-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"></path>
+                                </svg>
+                                File Explorer
+                            </h3>
+                            <div class="file-tree" id="fileTree">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                        <div class="sidebar-section">
+                            <h3 class="sidebar-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                                </svg>
+                                System Info
+                            </h3>
+                            <div class="system-info" id="systemInfo">
+                                <div class="info-row">
+                                    <span class="info-label">User:</span>
+                                    <span class="info-value" id="infoUser">user</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Host:</span>
+                                    <span class="info-value" id="infoHost">yash-web</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Shell:</span>
+                                    <span class="info-value">yash</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Processes:</span>
+                                    <span class="info-value" id="infoProcesses">2</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sidebar-section">
+                            <h3 class="sidebar-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                History
+                            </h3>
+                            <div class="history-list" id="historyList">
+                                <p class="empty-state">No commands yet</p>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- Documentation Section -->
+            <section class="docs-section" id="docs">
+                <h2 class="section-title">Quick Reference</h2>
+                <div class="docs-grid">
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">📁</span>
+                            <h3>File System</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>ls [-a] [-l]</code> - List directory</li>
+                            <li><code>cd [dir]</code> - Change directory</li>
+                            <li><code>pwd</code> - Print working directory</li>
+                            <li><code>cat file</code> - View file content</li>
+                            <li><code>head/tail [-n]</code> - View parts</li>
+                            <li><code>touch file</code> - Create file</li>
+                            <li><code>mkdir [-p] dir</code> - Create directory</li>
+                            <li><code>rm [-rf] file</code> - Remove file/dir</li>
+                            <li><code>cp [-r] src dest</code> - Copy files</li>
+                            <li><code>mv src dest</code> - Move/rename</li>
+                            <li><code>ln [-s] target link</code> - Create link</li>
+                            <li><code>chmod mode file</code> - Change permissions</li>
+                            <li><code>stat file</code> - File info</li>
+                            <li><code>tree [path]</code> - Directory tree</li>
+                            <li><code>find -name pattern</code> - Find files</li>
+                            <li><code>df / du</code> - Disk usage</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">📝</span>
+                            <h3>Text Processing</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>grep pattern file</code> - Search patterns</li>
+                            <li><code>sed 's/old/new/g'</code> - Stream editor</li>
+                            <li><code>awk '{print $1}'</code> - Text processing</li>
+                            <li><code>sort [-rnu]</code> - Sort lines</li>
+                            <li><code>uniq [-cd]</code> - Remove duplicates</li>
+                            <li><code>cut -d: -f1</code> - Cut columns</li>
+                            <li><code>wc [-lwc]</code> - Word count</li>
+                            <li><code>tr set1 set2</code> - Translate chars</li>
+                            <li><code>rev / tac</code> - Reverse</li>
+                            <li><code>nl</code> - Number lines</li>
+                            <li><code>diff file1 file2</code> - Compare files</li>
+                            <li><code>strings file</code> - Extract strings</li>
+                            <li><code>base64 [-d]</code> - Encode/decode</li>
+                            <li><code>md5sum / sha256sum</code> - Checksums</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">⚙️</span>
+                            <h3>Processes</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>ps [aux]</code> - List processes</li>
+                            <li><code>kill [-signal] pid</code> - Send signal</li>
+                            <li><code>killall name</code> - Kill by name</li>
+                            <li><code>pgrep / pkill</code> - Pattern match</li>
+                            <li><code>jobs</code> - List jobs</li>
+                            <li><code>bg / fg [job]</code> - Background/foreground</li>
+                            <li><code>wait [pid]</code> - Wait for jobs</li>
+                            <li><code>disown [job]</code> - Remove from jobs</li>
+                            <li><code>nice -n adj cmd</code> - Set priority</li>
+                            <li><code>nohup cmd</code> - Ignore hangup</li>
+                            <li><code>timeout sec cmd</code> - Time limit</li>
+                            <li><code>time cmd</code> - Measure time</li>
+                            <li><code>uptime</code> - System uptime</li>
+                            <li><code>free</code> - Memory usage</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">👤</span>
+                            <h3>Users & System</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>whoami</code> - Current user</li>
+                            <li><code>id [user]</code> - User identity</li>
+                            <li><code>groups [user]</code> - User groups</li>
+                            <li><code>users / who / w</code> - Logged users</li>
+                            <li><code>su [user]</code> - Switch user</li>
+                            <li><code>sudo cmd</code> - Run as root</li>
+                            <li><code>passwd [user]</code> - Change password</li>
+                            <li><code>uname [-a]</code> - System info</li>
+                            <li><code>hostname</code> - Host name</li>
+                            <li><code>env / printenv</code> - Environment</li>
+                            <li><code>export VAR=val</code> - Set variable</li>
+                            <li><code>unset VAR</code> - Remove variable</li>
+                            <li><code>date [+format]</code> - Date/time</li>
+                            <li><code>cal [month year]</code> - Calendar</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🔧</span>
+                            <h3>Built-in Commands</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>echo [-ne] text</code> - Print text</li>
+                            <li><code>printf fmt args</code> - Format output</li>
+                            <li><code>read [-p] var</code> - Read input</li>
+                            <li><code>test expr / [ ]</code> - Evaluate</li>
+                            <li><code>true / false</code> - Exit codes</li>
+                            <li><code>exit [code]</code> - Exit shell</li>
+                            <li><code>source file</code> - Execute file</li>
+                            <li><code>eval args</code> - Evaluate args</li>
+                            <li><code>exec cmd</code> - Replace shell</li>
+                            <li><code>trap cmd signals</code> - Signal handler</li>
+                            <li><code>set -- args</code> - Set positional</li>
+                            <li><code>shift [n]</code> - Shift params</li>
+                            <li><code>local var=val</code> - Local variable</li>
+                            <li><code>history</code> - Command history</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🔄</span>
+                            <h3>Control Flow</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>if cond then ... fi</code></li>
+                            <li><code>if ... elif ... else ... fi</code></li>
+                            <li><code>while cond do ... done</code></li>
+                            <li><code>until cond do ... done</code></li>
+                            <li><code>for x in list do ... done</code></li>
+                            <li><code>function name { ... }</code></li>
+                            <li><code>name() { ... }</code></li>
+                            <li><code>return [n]</code> - Return value</li>
+                            <li><code>break [n]</code> - Exit loop</li>
+                            <li><code>continue [n]</code> - Next iteration</li>
+                            <li><code>cmd &</code> - Background</li>
+                            <li><code>cmd1 && cmd2</code> - AND</li>
+                            <li><code>cmd1 || cmd2</code> - OR</li>
+                            <li><code>cmd1 ; cmd2</code> - Sequence</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🔢</span>
+                            <h3>Math & Operators</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>+ - * / %</code> - Arithmetic</li>
+                            <li><code>**</code> - Power</li>
+                            <li><code>== != > < >= <=</code> - Comparison</li>
+                            <li><code>&& || !</code> - Logical</li>
+                            <li><code>let "expr"</code> - Arithmetic eval</li>
+                            <li><code>((expr))</code> - Math expression</li>
+                            <li><code>expr 1 + 2</code> - Calculate</li>
+                            <li><code>bc</code> - Calculator</li>
+                            <li><code>seq start end</code> - Sequence</li>
+                            <li><code>factor n</code> - Factorize</li>
+                            <li><code>random min max</code> - Random number</li>
+                            <li><code>nbr / str</code> - Type conversion</li>
+                            <li><code>max / min</code> - Min/max value</li>
+                            <li><code>pow base [exp]</code> - Power</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">💾</span>
+                            <h3>Variables</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>var=value</code> - Assignment</li>
+                            <li><code>$var</code> - Get value</li>
+                            <li><code>$0</code> - Script name</li>
+                            <li><code>$1 $2 ...</code> - Positional args</li>
+                            <li><code>$#</code> - Argument count</li>
+                            <li><code>$@</code> - All args (separate)</li>
+                            <li><code>$*</code> - All args (joined)</li>
+                            <li><code>$?</code> - Last exit code</li>
+                            <li><code>$$</code> - Current PID</li>
+                            <li><code>$!</code> - Last background PID</li>
+                            <li><code>arr=(1 2 3)</code> - Array literal</li>
+                            <li><code>$arr[0]</code> - Array access</li>
+                            <li><code>$arr[$i]</code> - Dynamic index</li>
+                            <li><code>declare [-irx]</code> - Declare var</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🔀</span>
+                            <h3>Pipes & Redirection</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>cmd1 | cmd2</code> - Pipe output</li>
+                            <li><code>val |> $_ * 2</code> - Pipe to $_</li>
+                            <li><code>$_ + 1 <| val</code> - Reverse pipe</li>
+                            <li><code>5 |> $_ * 2 |> $_ + 1</code> - Chain</li>
+                            <li><code>tee file</code> - Duplicate output</li>
+                            <li><code>xargs cmd</code> - Build commands</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🧪</span>
+                            <h3>Test Operators</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>-e file</code> - File exists</li>
+                            <li><code>-f file</code> - Is regular file</li>
+                            <li><code>-d dir</code> - Is directory</li>
+                            <li><code>-r/-w/-x</code> - Readable/writable/exec</li>
+                            <li><code>-z str</code> - String is empty</li>
+                            <li><code>-n str</code> - String not empty</li>
+                            <li><code>str1 = str2</code> - String equal</li>
+                            <li><code>str1 != str2</code> - String not equal</li>
+                            <li><code>n1 -eq n2</code> - Numeric equal</li>
+                            <li><code>n1 -ne n2</code> - Numeric not equal</li>
+                            <li><code>n1 -lt/-le n2</code> - Less than</li>
+                            <li><code>n1 -gt/-ge n2</code> - Greater than</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🌐</span>
+                            <h3>Network (Simulated)</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>ping host</code> - Test connectivity</li>
+                            <li><code>curl url</code> - HTTP request</li>
+                            <li><code>wget url</code> - Download file</li>
+                            <li><code>host domain</code> - DNS lookup</li>
+                            <li><code>dig domain</code> - DNS query</li>
+                            <li><code>netstat</code> - Network stats</li>
+                            <li><code>ifconfig</code> - Interface config</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card git-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">📦</span>
+                            <h3>Git (isomorphic-git)</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>git init</code> - Create repository</li>
+                            <li><code>git clone url</code> - Clone repository</li>
+                            <li><code>git add file</code> - Stage changes</li>
+                            <li><code>git commit -m "msg"</code> - Commit</li>
+                            <li><code>git status</code> - Show status</li>
+                            <li><code>git log [--oneline]</code> - History</li>
+                            <li><code>git branch [-d]</code> - Branches</li>
+                            <li><code>git checkout [-b]</code> - Switch branch</li>
+                            <li><code>git diff</code> - Show changes</li>
+                            <li><code>git remote add/rm</code> - Remotes</li>
+                            <li><code>git fetch/pull/push</code> - Sync</li>
+                            <li><code>git tag [-d]</code> - Tags</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">📚</span>
+                            <h3>Misc Utilities</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>help [cmd]</code> - Show help</li>
+                            <li><code>which cmd</code> - Locate command</li>
+                            <li><code>type cmd</code> - Command type</li>
+                            <li><code>clear / reset</code> - Clear screen</li>
+                            <li><code>sleep sec</code> - Delay execution</li>
+                            <li><code>yes [text]</code> - Repeat output</li>
+                            <li><code>shuf</code> - Shuffle lines</li>
+                            <li><code>basename path</code> - File name</li>
+                            <li><code>dirname path</code> - Directory name</li>
+                            <li><code>realpath path</code> - Absolute path</li>
+                            <li><code>mktemp</code> - Create temp file</li>
+                            <li><code>tty / stty</code> - Terminal info</li>
+                        </ul>
+                    </div>
+                    <div class="doc-card python-card">
+                        <div class="doc-card-header">
+                            <span class="doc-icon">🐍</span>
+                            <h3>Python (Pyodide)</h3>
+                        </div>
+                        <ul class="command-list">
+                            <li><code>python</code> - Interactive REPL</li>
+                            <li><code>python -c 'code'</code> - Run inline</li>
+                            <li><code>python file.py</code> - Run script</li>
+                            <li><code>python -V</code> - Show version</li>
+                            <li><code>python3</code> - Alias for python</li>
+                            <li><code>exit()</code> - Exit REPL</li>
+                            <li><code>Ctrl+D</code> - Exit REPL (empty line)</li>
+                            <li><code>Ctrl+C</code> - Cancel input</li>
+                            <li>Supports multi-line blocks</li>
+                            <li>Full Python 3.11 stdlib</li>
+                            <li>NumPy, Pandas available</li>
+                            <li>Runs 100% in browser</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>Built with ❤️ by <a href="https://github.com/Thumuss" target="_blank">Thumuss</a></p>
+                <p class="footer-links">
+                    <a href="https://thumus.eu" target="_blank">thumus.eu</a>
+                    <span>•</span>
+                    <a href="https://github.com/Thumuss/yash" target="_blank">Source Code</a>
+                    <span>•</span>
+                    <span>MIT License</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="dist/app.js"></script>
+</body>
+</html>

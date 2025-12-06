@@ -1,14 +1,18 @@
 {
-  "name": "yash",
-  "module": "src/import.ts",
-  "type": "module",
+  "name": "yash-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "bun build ./src/runner.ts --outdir ./build --minify"
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "test:watch": "bun test --watch",
+    "dev": "bun run --filter '@yash/website' dev"
   },
   "devDependencies": {
-    "bun-types": "latest"
-  },
-  "peerDependencies": {
+    "bun-types": "latest",
     "typescript": "latest"
   }
 }

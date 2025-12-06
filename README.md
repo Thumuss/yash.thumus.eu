@@ -125,18 +125,27 @@ You can open an issue at my [repository](https://github.com/Thumuss/yash.thumus.
 
 Things I need to do:
 
+- [ ] **Built-in shell commands** (priority):
+    - Core: `echo`, `printf`, `read`, `test`/`[`, `true`, `false`
+    - Navigation: `cd`, `pwd`, `export`, `unset`, `set`, `source`/`.`
+    - Control: `exit`, `return`, `break`, `continue`
+    - Evaluation: `eval`, `exec`, `shift`, `trap`
+    - Variables: `let`, `declare`, `typeset`, `readonly`
+    - Jobs: `jobs`, `fg`, `bg`, `wait`, `kill`, `disown`
+- [ ] **Virtual subsystem** (future): Virtual filesystem for system commands (`ls`, `cat`, `grep`, `sed`, `awk`, etc.) - ~800 commands to emulate via bridge for a complete web terminal
 - [ ] Separate topics: Numbers need to be with Equations, Args with args etc...
     - [ ] Statement: Everything is a statement but it's not normal
     - [ ] Equations: Numbers, Floats
     - [ ] Logical: Logical operators with booleans
     - [x] Args: Contains command and args for the command
-    - [ ] Flow: Preprocess (|>, <|), link external tools?
-    - [ ] Bits: Operators with bits (&, |, )
+    - [x] Flow: Pipes (|, |>, <|), background operator (&)
+    - [ ] Bits: Operators with bits
 - [ ] Strict mode: The goal is to run normal bash and yash. Useful with equations
 - [ ] Impl basic helper functions: We need functions to use it in C for example.
 - [ ] Yash to Bash: A converter tool can be useful. 
-- [ ] Errors: Line, column with a little graphic and a stack trace.
-- [ ] Add keywords: Some keywords aren't already implemented.
+- [x] Errors: Line, column position tracking implemented
+- [x] Add keywords: while, until, for, local, function with () syntax
 - [ ] Reorganise: Everything is in the name
 - [ ] DOCS: obv
-- [ ] Add structs: Arrays, Dicts, Tuples, ...
+- [x] Add structs: Arrays implemented (arr=(1 2 3), $arr[0])
+- [ ] Add structs: Dicts, Tuples (not yet implemented)

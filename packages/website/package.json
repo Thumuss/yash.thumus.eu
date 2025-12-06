@@ -1,0 +1,22 @@
+{
+  "name": "@yash/website",
+  "version": "1.0.0",
+  "description": "YASH web terminal interface",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run build && bun run serve",
+    "build": "bun run build:lib && bun run build:app",
+    "build:lib": "bun build src/index.ts --outdir=dist --minify",
+    "build:app": "bun build app/app.js --outdir=app/dist --minify --target=browser",
+    "serve": "bun run server.ts",
+    "preview": "bun run dist/index.js"
+  },
+  "dependencies": {
+    "@yash/language": "workspace:*",
+    "@yash/system": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.8.3"
+  }
+}
